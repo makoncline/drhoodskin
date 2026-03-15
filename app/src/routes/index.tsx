@@ -1,7 +1,7 @@
 import { createFileRoute } from '@tanstack/react-router'
+import { useEffect, useRef } from 'react'
 import {
   ArrowRight,
-  BadgeCheck,
   CalendarDays,
   ChevronDown,
   ExternalLink,
@@ -93,6 +93,43 @@ type SourceLinkItem = {
   onClick?: () => void
 }
 
+function useReveal() {
+  const ref = useRef<HTMLElement>(null)
+  useEffect(() => {
+    const el = ref.current
+    if (!el) return
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry?.isIntersecting) {
+          el.classList.add('revealed')
+          observer.disconnect()
+        }
+      },
+      { threshold: 0.1 },
+    )
+    observer.observe(el)
+    return () => observer.disconnect()
+  }, [])
+  return ref
+}
+
+function RevealSection({
+  children,
+  className = '',
+  as: Tag = 'section',
+}: {
+  children: React.ReactNode
+  className?: string
+  as?: 'section' | 'footer'
+}) {
+  const ref = useReveal()
+  return (
+    <Tag ref={ref} className={`reveal-section ${className}`.trim()}>
+      {children}
+    </Tag>
+  )
+}
+
 export const Route = createFileRoute('/')({
   head: () => ({
     links: [{ rel: 'canonical', href: content.seo.canonical }],
@@ -125,7 +162,7 @@ function Home() {
           <a
             href={content.office.phoneHref}
             onClick={() => trackEvent('sticky_call_click')}
-            className="inline-flex shrink-0 items-center gap-2 whitespace-nowrap rounded-full border border-[var(--line)] px-3 py-2 text-sm font-semibold text-[var(--ink)] transition hover:border-[var(--accent)] hover:text-[var(--accent)]"
+            className="inline-flex shrink-0 items-center gap-2 whitespace-nowrap rounded-full border border-[var(--line)] px-3 py-2 text-sm font-semibold text-[var(--ink)] transition hover:border-[var(--accent-strong)] hover:text-[var(--accent-strong)]"
           >
             <Phone className="h-4 w-4" />
             Call {content.office.phoneDisplay}
@@ -141,12 +178,12 @@ function Home() {
         </div>
       </header>
 
-      <section className="section-wrap grid gap-10 py-10 lg:grid-cols-[minmax(0,1.02fr)_24rem] lg:items-center lg:gap-14 lg:py-16">
+      <RevealSection className="section-wrap grid gap-10 py-10 lg:grid-cols-[minmax(0,1.02fr)_24rem] lg:items-center lg:gap-14 lg:py-16">
         <div>
-          <p className="mb-5 text-[0.72rem] font-semibold uppercase tracking-[0.4em] text-[var(--accent)]">
+          <p className="mb-3 text-[0.72rem] font-semibold uppercase tracking-[0.4em] text-[var(--accent)]">
             {content.identity.name}
           </p>
-          <h1 className="max-w-4xl font-display text-[clamp(2.85rem,6vw,5.4rem)] leading-[0.94] tracking-[-0.05em]">
+          <h1 className="max-w-4xl font-display text-[clamp(2.4rem,8vw,5.4rem)] leading-[0.94] tracking-[-0.05em]">
             Board-Certified Dermatology Care in Golden
           </h1>
           <p className="mt-6 max-w-2xl text-lg leading-8 text-[var(--muted)]">
@@ -167,7 +204,7 @@ function Home() {
             <a
               href={content.office.phoneHref}
               onClick={() => trackEvent('hero_call_click')}
-              className="inline-flex w-full items-center justify-center gap-2 whitespace-nowrap rounded-full border border-[var(--line-strong)] bg-white px-5 py-3.5 text-base font-semibold text-[var(--ink)] transition hover:border-[var(--accent)] hover:text-[var(--accent)] sm:w-auto sm:px-6"
+              className="inline-flex w-full items-center justify-center gap-2 whitespace-nowrap rounded-full border border-[var(--line-strong)] bg-white px-5 py-3.5 text-base font-semibold text-[var(--ink)] transition hover:border-[var(--accent-strong)] hover:text-[var(--accent-strong)] sm:w-auto sm:px-6"
             >
               <Phone className="h-4 w-4" />
               Call {content.office.phoneDisplay}
@@ -198,7 +235,7 @@ function Home() {
         </div>
 
         <div className="lg:justify-self-end">
-          <figure className="overflow-hidden rounded-[1.75rem] border border-[var(--line)] bg-[var(--surface)] shadow-[var(--shadow-soft)]">
+          <figure className="relative overflow-hidden rounded-[1.75rem] border border-[var(--line)] bg-[var(--surface)] shadow-[var(--shadow-soft)] before:absolute before:inset-0 before:bg-gradient-to-t before:from-[var(--paper)] before:to-transparent before:opacity-20">
             <img
               src={content.identity.headshotSrc}
               alt={content.identity.name}
@@ -207,22 +244,23 @@ function Home() {
             />
           </figure>
         </div>
-      </section>
+      </RevealSection>
 
-      <section className="section-wrap border-t border-[var(--line)] py-6 lg:py-8">
+      <RevealSection className="section-wrap border-t border-[var(--line)] py-6 lg:py-8">
         <div className="flex flex-wrap gap-2">
           {content.trustChips.map((chip) => (
             <span
               key={chip}
-              className="inline-flex items-center rounded-full border border-[var(--line)] bg-[var(--surface)] px-3 py-1.5 text-sm font-medium text-[var(--ink)]"
+              className="inline-flex items-center gap-2 rounded-full border border-[var(--accent)]/20 bg-[var(--accent-soft)] px-3.5 py-2 text-sm font-medium text-[var(--ink)]"
             >
+              <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-[var(--accent)]" />
               {chip}
             </span>
           ))}
         </div>
-      </section>
+      </RevealSection>
 
-      <section className="section-wrap border-t border-[var(--line)] py-12 lg:py-14">
+      <RevealSection className="section-wrap border-t border-[var(--line)] py-12 lg:py-14">
         <div className="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
           <div>
             <p className="eyebrow">Why choose Dr. Hood in Golden</p>
@@ -256,9 +294,9 @@ function Home() {
             </div>
           ))}
         </div>
-      </section>
+      </RevealSection>
 
-      <section className="section-wrap border-t border-[var(--line)] py-12 lg:py-14">
+      <RevealSection className="section-wrap border-t border-[var(--line)] py-12 lg:py-14">
         <div className="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
           <div>
             <p className="eyebrow">Conditions treated</p>
@@ -316,9 +354,9 @@ function Home() {
             </div>
           </div>
         </div>
-      </section>
+      </RevealSection>
 
-      <section className="section-wrap border-t border-[var(--line)] py-12 lg:py-14">
+      <RevealSection className="section-wrap border-t border-[var(--line)] py-12 lg:py-14">
         <div className="grid gap-10 lg:grid-cols-[minmax(0,1fr)_18rem]">
           <div>
             <p className="eyebrow">About Dr. Hood</p>
@@ -363,68 +401,72 @@ function Home() {
 
           <div className="border-t border-[var(--line)] pt-5 lg:pt-0">
             <p className="eyebrow">Additional credibility</p>
-            <div className="space-y-4">
+            <div className="mt-3 flex flex-col gap-3">
               {content.elsewhereOnline.map((item) => (
                 <a
                   key={item.label}
                   href={item.href}
-                  className="inline-flex items-center gap-2 text-sm font-semibold text-[var(--ink)] transition hover:text-[var(--accent)]"
+                  className="flex items-center gap-2 text-sm font-semibold text-[var(--ink)] transition hover:text-[var(--accent-strong)]"
                 >
                   {item.label}
-                  <ExternalLink className="h-4 w-4" />
+                  <ExternalLink className="h-4 w-4 shrink-0" />
                 </a>
               ))}
             </div>
           </div>
         </div>
-      </section>
+      </RevealSection>
 
-      <section className="section-wrap border-t border-[var(--line)] py-12 lg:py-14">
-        <div className="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
-          <div>
-            <p className="eyebrow">What patients say</p>
-            <h2 className="section-title">Official office reviews, kept simple.</h2>
+      <RevealSection className="section-wrap border-t border-[var(--line)] py-12 lg:py-14">
+        <div className="rounded-2xl bg-[var(--surface)] p-6 shadow-[var(--shadow-soft)] lg:p-8">
+          <div className="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
+            <div>
+              <p className="eyebrow">What patients say</p>
+              <h2 className="section-title">Official office reviews, kept simple.</h2>
+            </div>
+            <SourceLinks
+              links={[
+                {
+                  href: content.officialSources.goldenOffice,
+                  label: 'Golden office page',
+                },
+              ]}
+            />
           </div>
-          <SourceLinks
-            links={[
-              {
-                href: content.officialSources.goldenOffice,
-                label: 'Golden office page',
-              },
-            ]}
-          />
+
+          <div className="mt-8 flex flex-col gap-4 md:grid md:grid-cols-2">
+            {content.reviews.map((review) => (
+              <article
+                key={`${review.author}-${review.dateLabel}`}
+                className="rounded-2xl border border-[var(--line)] bg-[var(--surface)] p-5 shadow-sm"
+              >
+                <span className="text-4xl font-display leading-none text-[var(--accent)] opacity-40">
+                  &ldquo;
+                </span>
+                <p className="mt-2 text-base leading-8 text-[var(--ink)]">
+                  {review.quote}
+                </p>
+                <p className="mt-4 text-sm text-[var(--muted)]">
+                  {review.author} · Source: {review.sourceLabel} · {review.dateLabel}
+                </p>
+              </article>
+            ))}
+          </div>
+
+          <a
+            href={content.externalSources.healthgrades}
+            target="_blank"
+            rel="noreferrer"
+            onClick={() => trackEvent('review_outbound_click')}
+            className="mt-6 inline-flex items-center gap-2 text-sm font-semibold text-[var(--ink)] transition hover:text-[var(--accent-strong)]"
+          >
+            {content.reviewOutboundLabel}
+            <ExternalLink className="h-4 w-4" />
+          </a>
         </div>
+      </RevealSection>
 
-        <div className="mt-8 grid gap-4 md:grid-cols-2">
-          {content.reviews.map((review) => (
-            <article
-              key={`${review.author}-${review.dateLabel}`}
-              className="border-t border-[var(--line)] pt-5"
-            >
-              <BadgeCheck className="h-4 w-4 text-[var(--accent)]" />
-              <p className="mt-4 text-base leading-8 text-[var(--ink)]">
-                &ldquo;{review.quote}&rdquo;
-              </p>
-              <p className="mt-4 text-sm text-[var(--muted)]">
-                {review.author} · Source: {review.sourceLabel} · {review.dateLabel}
-              </p>
-            </article>
-          ))}
-        </div>
-
-        <a
-          href={content.externalSources.healthgrades}
-          target="_blank"
-          rel="noreferrer"
-          onClick={() => trackEvent('review_outbound_click')}
-          className="mt-6 inline-flex items-center gap-2 text-sm font-semibold text-[var(--ink)] transition hover:text-[var(--accent)]"
-        >
-          {content.reviewOutboundLabel}
-          <ExternalLink className="h-4 w-4" />
-        </a>
-      </section>
-
-      <section className="section-wrap border-t border-[var(--line)] py-12 lg:py-14">
+      <RevealSection className="section-wrap border-t border-[var(--line)] py-12 lg:py-14">
         <div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_24rem] lg:gap-12">
           <div>
             <p className="eyebrow">Visit the Golden clinic</p>
@@ -461,15 +503,7 @@ function Home() {
           <div className="border-t border-[var(--line)] pt-5 lg:pt-0">
             <div className="space-y-6 divide-y divide-[var(--line)]">
               <div className="pb-1">
-                <figure className="overflow-hidden rounded-[1.25rem] border border-[var(--line)] bg-[var(--surface)]">
-                  <img
-                    src={content.identity.officeImageSrc}
-                    alt={`${content.office.name} exterior`}
-                    className="aspect-[5/4] w-full object-cover"
-                    loading="lazy"
-                  />
-                </figure>
-                <p className="eyebrow mt-5">Address</p>
+                <p className="eyebrow">Address</p>
                 <p className="mt-2 text-lg font-semibold">
                   {content.office.address1}
                 </p>
@@ -483,7 +517,7 @@ function Home() {
                 <div className="mt-2 flex flex-col items-start gap-4">
                   <a
                     href={content.office.phoneHref}
-                    className="inline-flex items-center gap-2 whitespace-nowrap text-lg font-semibold text-[var(--ink)] transition hover:text-[var(--accent)]"
+                    className="inline-flex items-center gap-2 whitespace-nowrap text-lg font-semibold text-[var(--ink)] transition hover:text-[var(--accent-strong)]"
                   >
                     <Phone className="h-4 w-4" />
                     {content.office.phoneDisplay}
@@ -491,7 +525,7 @@ function Home() {
                   <a
                     href={content.map.directionsHref}
                     onClick={() => trackEvent('directions_click')}
-                    className="inline-flex items-center gap-2 text-sm font-semibold text-[var(--ink)] transition hover:text-[var(--accent)]"
+                    className="inline-flex items-center gap-2 text-sm font-semibold text-[var(--ink)] transition hover:text-[var(--accent-strong)]"
                   >
                     Get directions
                     <ExternalLink className="h-4 w-4" />
@@ -516,12 +550,13 @@ function Home() {
             </div>
           </div>
         </div>
-      </section>
+      </RevealSection>
 
-      <section className="section-wrap border-t border-[var(--line)] py-12 lg:py-14">
-        <div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_18rem]">
-          <div>
-            <p className="eyebrow">Insurance &amp; first visit</p>
+      <RevealSection className="section-wrap border-t border-[var(--line)] py-12 lg:py-14">
+        <div className="rounded-2xl bg-[var(--surface)] p-6 lg:p-8">
+          <div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_18rem]">
+            <div>
+              <p className="eyebrow">Insurance &amp; first visit</p>
             <h2 className="section-title">Reduce booking friction before the appointment.</h2>
             <p className="mt-5 max-w-3xl text-base leading-8 text-[var(--muted)]">
               {content.insurance.summary} {content.insurance.disclaimer}
@@ -549,7 +584,7 @@ function Home() {
                     target="_blank"
                     rel="noreferrer"
                     onClick={() => trackEvent('forms_click', { type: 'printable' })}
-                    className="inline-flex items-center gap-2 text-sm font-semibold text-[var(--ink)] transition hover:text-[var(--accent)]"
+                    className="inline-flex items-center gap-2 text-sm font-semibold text-[var(--ink)] transition hover:text-[var(--accent-strong)]"
                   >
                     {content.firstVisit.printableFormsLabel}
                     <ExternalLink className="h-4 w-4" />
@@ -559,7 +594,7 @@ function Home() {
                     target="_blank"
                     rel="noreferrer"
                     onClick={() => trackEvent('forms_click', { type: 'history' })}
-                    className="inline-flex items-center gap-2 text-sm font-semibold text-[var(--ink)] transition hover:text-[var(--accent)]"
+                    className="inline-flex items-center gap-2 text-sm font-semibold text-[var(--ink)] transition hover:text-[var(--accent-strong)]"
                   >
                     {content.firstVisit.healthHistoryLabel}
                     <ExternalLink className="h-4 w-4" />
@@ -579,7 +614,7 @@ function Home() {
                 <a
                   href={content.officialSources.insurance}
                   onClick={() => trackEvent('insurance_source_click')}
-                  className="mt-5 inline-flex items-center gap-2 text-sm font-semibold text-[var(--ink)] transition hover:text-[var(--accent)]"
+                  className="mt-5 inline-flex items-center gap-2 text-sm font-semibold text-[var(--ink)] transition hover:text-[var(--accent-strong)]"
                 >
                   Official insurance information
                   <ExternalLink className="h-4 w-4" />
@@ -593,7 +628,7 @@ function Home() {
             <div className="space-y-3">
               <a
                 href={content.officialSources.patientForms}
-                className="inline-flex items-center gap-2 text-sm font-semibold text-[var(--ink)] transition hover:text-[var(--accent)]"
+                className="inline-flex items-center gap-2 text-sm font-semibold text-[var(--ink)] transition hover:text-[var(--accent-strong)]"
               >
                 Patient forms page
                 <ExternalLink className="h-4 w-4" />
@@ -601,7 +636,7 @@ function Home() {
               <a
                 href={content.officialSources.insurance}
                 onClick={() => trackEvent('insurance_source_click')}
-                className="inline-flex items-center gap-2 text-sm font-semibold text-[var(--ink)] transition hover:text-[var(--accent)]"
+                className="inline-flex items-center gap-2 text-sm font-semibold text-[var(--ink)] transition hover:text-[var(--accent-strong)]"
               >
                 Insurance information
                 <ExternalLink className="h-4 w-4" />
@@ -609,9 +644,10 @@ function Home() {
             </div>
           </div>
         </div>
-      </section>
+        </div>
+      </RevealSection>
 
-      <section className="section-wrap border-t border-[var(--line)] py-12 lg:py-14">
+      <RevealSection className="section-wrap border-t border-[var(--line)] py-12 lg:py-14">
         <div className="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
           <div>
             <p className="eyebrow">FAQ</p>
@@ -660,14 +696,14 @@ function Home() {
             </details>
           ))}
         </div>
-      </section>
+      </RevealSection>
 
-      <section className="section-wrap border-t border-[var(--line)] py-14 lg:py-20">
-        <div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-end">
+      <RevealSection className="bg-[var(--accent)] py-14 text-white lg:py-20">
+        <div className="section-wrap grid gap-8 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-end">
           <div>
-            <p className="eyebrow">Book an appointment</p>
-            <h2 className="section-title">Ready to book with Dr. Hood in Golden?</h2>
-            <p className="mt-5 max-w-2xl text-base leading-7 text-[var(--muted)]">
+            <p className="eyebrow text-white/80">Book an appointment</p>
+            <h2 className="section-title text-white">Ready to book with Dr. Hood in Golden?</h2>
+            <p className="mt-5 max-w-2xl text-base leading-7 text-white/80">
               Use the official appointment form or call the Golden office
               directly.
             </p>
@@ -677,25 +713,25 @@ function Home() {
             <a
               href={content.booking.href}
               onClick={() => trackEvent('final_cta_book_click')}
-              className="inline-flex w-full items-center justify-center gap-2 whitespace-nowrap rounded-full bg-[var(--accent)] px-5 py-3.5 text-base font-semibold text-white transition hover:bg-[var(--accent-strong)] sm:w-auto sm:px-6"
+              className="inline-flex w-full items-center justify-center gap-2 whitespace-nowrap rounded-full bg-white px-5 py-3.5 text-base font-semibold text-[var(--ink)] transition hover:bg-white/90 sm:w-auto sm:px-6"
             >
               {content.booking.ctaLabel}
             </a>
             <a
               href={content.office.phoneHref}
               onClick={() => trackEvent('final_cta_call_click')}
-              className="inline-flex w-full items-center justify-center gap-2 whitespace-nowrap rounded-full border border-[var(--line-strong)] bg-white px-5 py-3.5 text-base font-semibold text-[var(--ink)] transition hover:border-[var(--accent)] hover:text-[var(--accent)] sm:w-auto sm:px-6"
+              className="inline-flex w-full items-center justify-center gap-2 whitespace-nowrap rounded-full border-2 border-white px-5 py-3.5 text-base font-semibold text-white transition hover:bg-white/20 sm:w-auto sm:px-6"
             >
               Call {content.office.phoneDisplay}
             </a>
           </div>
         </div>
-      </section>
+      </RevealSection>
 
-      <footer className="border-t border-[var(--line)] bg-[var(--surface)]">
-        <div className="section-wrap flex flex-col gap-4 py-8 text-sm text-[var(--muted)] lg:flex-row lg:items-end lg:justify-between">
+      <RevealSection as="footer" className="border-t border-[var(--line)] bg-[var(--ink)]">
+        <div className="section-wrap flex flex-col gap-4 py-12 text-sm text-white/70 lg:flex-row lg:items-end lg:justify-between">
           <div>
-            <p className="font-semibold text-[var(--ink)]">{content.identity.name}</p>
+            <p className="font-semibold text-white">{content.identity.name}</p>
             <p>{content.identity.title}</p>
             <p>{content.office.name}</p>
             <p>
@@ -707,20 +743,20 @@ function Home() {
           </div>
 
           <div className="flex flex-wrap gap-5">
-            <a href={content.officialSources.provider} className="font-medium hover:text-[var(--accent)]">
+            <a href={content.officialSources.provider} className="font-medium text-white/80 transition hover:text-white">
               Official provider profile
             </a>
-            <a href={content.officialSources.goldenOffice} className="font-medium hover:text-[var(--accent)]">
+            <a href={content.officialSources.goldenOffice} className="font-medium text-white/80 transition hover:text-white">
               Golden office page
             </a>
-            <a href={content.officialSources.appointment} className="font-medium hover:text-[var(--accent)]">
+            <a href={content.officialSources.appointment} className="font-medium text-white/80 transition hover:text-white">
               Appointment page
             </a>
           </div>
         </div>
-      </footer>
+      </RevealSection>
 
-      <div className="fixed inset-x-0 bottom-0 z-50 border-t border-[var(--line)] bg-[var(--paper-strong)] p-3 backdrop-blur sm:hidden">
+      <div className="fixed inset-x-0 bottom-0 z-50 rounded-t-2xl border-t border-[var(--line)] bg-[var(--paper-strong)] px-4 py-3.5 shadow-[0_-4px_20px_rgba(31,43,47,0.08)] backdrop-blur sm:hidden">
         <div className="mx-auto flex max-w-lg gap-3">
           <a
             href={content.booking.href}
@@ -733,7 +769,7 @@ function Home() {
           <a
             href={content.office.phoneHref}
             onClick={() => trackEvent('sticky_call_click')}
-            className="inline-flex flex-1 items-center justify-center gap-2 whitespace-nowrap rounded-full border border-[var(--line-strong)] bg-white px-4 py-3 text-sm font-semibold text-[var(--ink)] transition hover:border-[var(--accent)] hover:text-[var(--accent)]"
+            className="inline-flex flex-1 items-center justify-center gap-2 whitespace-nowrap rounded-full border border-[var(--line-strong)] bg-white px-4 py-3 text-sm font-semibold text-[var(--ink)] transition hover:border-[var(--accent-strong)] hover:text-[var(--accent-strong)]"
           >
             <Phone className="h-4 w-4" />
             Call
@@ -753,7 +789,7 @@ function SourceLinks({
 }) {
   return (
     <div
-      className={`flex flex-wrap items-center gap-2 text-xs text-[var(--muted)] ${className}`.trim()}
+      className={`flex flex-wrap items-center gap-2 text-[0.65rem] text-[var(--muted)] sm:text-xs ${className}`.trim()}
     >
       <span className="font-semibold uppercase tracking-[0.18em] text-[var(--muted)]">
         Official source
@@ -763,10 +799,10 @@ function SourceLinks({
           key={`${link.label}-${link.href}`}
           href={link.href}
           onClick={link.onClick}
-          className="inline-flex items-center gap-1 rounded-full border border-[var(--line)] bg-[var(--surface)] px-2.5 py-1 font-medium transition hover:text-[var(--accent)]"
+          className="inline-flex items-center gap-1 rounded-full border border-[var(--line)] bg-[var(--surface)] px-2 py-0.5 font-medium transition hover:text-[var(--accent-strong)] sm:px-2.5 sm:py-1"
         >
           {link.label}
-          <ExternalLink className="h-3.5 w-3.5" />
+          <ExternalLink className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
         </a>
       ))}
     </div>
