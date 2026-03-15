@@ -1,0 +1,16 @@
+services:
+  drhoodskin:
+    build:
+      context: ./app
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    environment:
+      PORT: 3000
+    networks:
+      edge:
+        aliases:
+          - drhoodskin
+
+networks:
+  edge:
+    external: true
