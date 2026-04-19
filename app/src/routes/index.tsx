@@ -12,6 +12,7 @@ import {
 } from 'lucide-react'
 import { drHoodVerified } from '../content/drHoodVerified'
 import { trackEvent } from '../lib/analytics'
+import { buildWebMcpScript } from '../lib/webMcp'
 
 const content = drHoodVerified
 
@@ -100,7 +101,7 @@ function useReveal() {
     if (!el) return
     const observer = new IntersectionObserver(
       ([entry]) => {
-        if (entry?.isIntersecting) {
+        if (entry.isIntersecting) {
           el.classList.add('revealed')
           observer.disconnect()
         }
@@ -156,6 +157,7 @@ function Home() {
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(physicianSchema) }}
       />
+      <script dangerouslySetInnerHTML={{ __html: buildWebMcpScript() }} />
 
       <header className="sticky top-0 z-40 hidden border-b border-[var(--line)] bg-[var(--paper-strong)] backdrop-blur sm:block">
         <div className="mx-auto flex max-w-7xl items-center justify-end gap-3 px-6 py-3 lg:px-8">
