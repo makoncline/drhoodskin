@@ -15,7 +15,7 @@ export const drHoodVerified = {
     goldenOffice:
       'https://www.usdermatologypartners.com/locations/colorado/golden/400-indiana-st-ste-380/',
     appointment:
-      'https://www.usdermatologypartners.com/request-an-appointment/',
+      'https://www.usdermatologypartners.com/locations/colorado/golden/400-indiana-st-ste-380/#id=5596&reason_id=&ag%20by%20e=&group=Medical%20Dermatology',
     patientForms:
       'https://www.usdermatologypartners.com/resources/patient-forms/',
     insurance:
@@ -85,7 +85,7 @@ export const drHoodVerified = {
 
   booking: {
     ctaLabel: 'Book an Appointment',
-    href: 'https://www.usdermatologypartners.com/request-an-appointment/',
+    href: 'https://www.usdermatologypartners.com/locations/colorado/golden/400-indiana-st-ste-380/#id=5596&reason_id=&ag%20by%20e=&group=Medical%20Dermatology',
     summary:
       'Use the official U.S. Dermatology Partners appointment form to request a visit at the Golden office.',
   },
