@@ -1,4 +1,7 @@
-FROM node:22-alpine AS deps
+FROM node:22.23.4-alpine AS base
+RUN apk add --no-cache --upgrade 'ca-certificates-bundle>=20261020-r0'
+
+FROM base AS deps
 WORKDIR /app
 
 COPY package.json package-lock.json ./
@@ -10,7 +13,7 @@ WORKDIR /app
 COPY . .
 RUN npm run build
 
-FROM node:22-alpine AS runtime
+FROM base AS runtime
 WORKDIR /app
 
 ENV NODE_ENV=production
