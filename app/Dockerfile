@@ -21,6 +21,9 @@ COPY --from=build /app/.output ./.output
 RUN --mount=type=bind,source=scripts/node-runtime-check.mjs,target=/tmp/node-runtime-check.mjs \
     node --test /tmp/node-runtime-check.mjs
 
+RUN --mount=type=bind,source=scripts/site-runtime-check.mjs,target=/tmp/site-runtime-check.mjs \
+    node --test /tmp/site-runtime-check.mjs
+
 EXPOSE 3000
 
 CMD ["node", ".output/server/index.mjs"]
