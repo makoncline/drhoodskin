@@ -2,6 +2,7 @@
   "name": "drhoodskin",
   "private": true,
   "type": "module",
+  "packageManager": "npm@10.9.9",
   "imports": {
     "#/*": "./src/*"
   },
