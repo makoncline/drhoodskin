@@ -5,11 +5,12 @@ import {
   contactPayload,
   getFaqResult,
   getServicesResult,
-  mcpTools,
+  llmsTxt,
   searchSiteContent,
   skillsIndex,
   sitemapXml,
 } from './agentReady'
+import { mcpTools } from './mcpTools'
 
 describe('agent-ready surfaces', () => {
   it('publishes a valid-looking skills index', () => {
@@ -46,6 +47,16 @@ describe('agent-ready surfaces', () => {
     })
     expect('sources' in faq && faq.sources.length > 0).toBe(true)
 
+    expect(getFaqResult('Do you take insurance?')).toMatchObject({
+      matchedQuestion: 'What should I know about insurance coverage?',
+    })
+    expect(getFaqResult('Can I book online?')).toMatchObject({
+      matchedQuestion: 'How do I book an appointment online?',
+    })
+    expect(getFaqResult('Is she taking new patients?')).toMatchObject({
+      matchedQuestion: 'Is Dr. Hood accepting new patients?',
+    })
+
     const services = getServicesResult('medical')
     expect(services.category).toBe('medical')
     const medical = services.medical
@@ -65,5 +76,11 @@ describe('agent-ready surfaces', () => {
     expect(results.results.some((item) => item.kind === 'service' || item.kind === 'insurance')).toBe(
       true,
     )
+  })
+
+  it('publishes llms.txt with both booking paths and their outcomes', () => {
+    expect(llmsTxt).toContain('https://nextpatient.co/p/5596/60744/appointments')
+    expect(llmsTxt).toContain('books a specific time')
+    expect(llmsTxt).toContain('Does not book a time')
   })
 })

@@ -6,7 +6,7 @@
 
 export const drHoodVerified = {
   meta: {
-    lastReviewed: '2026-03-15',
+    lastReviewed: '2026-11-14',
   },
 
   officialSources: {
@@ -25,6 +25,7 @@ export const drHoodVerified = {
   },
 
   externalSources: {
+    googleProfile: 'https://www.google.com/maps?cid=1492941526865069620',
     healthgrades:
       'https://www.healthgrades.com/physician/dr-channing-hood-11vyamkx77',
     time: 'https://time.com/7300908/how-to-stop-chafing/',
@@ -34,7 +35,7 @@ export const drHoodVerified = {
   seo: {
     title: 'Dr. Channing Hood | Dermatologist in Golden, CO',
     description:
-      'Board-certified dermatologist Channing Hood, MD, FAAD sees patients in Golden, Colorado for skin exams, acne, eczema, psoriasis, rosacea, hair loss, Botox, minor procedures, and skin cancer checks. Book online or call the Golden clinic.',
+      'Board-certified dermatologist Dr. Channing Hood sees adults and children in Golden, CO for skin cancer checks, acne, eczema, psoriasis, and more. Book online.',
     canonical: 'https://drhoodskin.com/',
   },
 
@@ -44,7 +45,7 @@ export const drHoodVerified = {
     fellowship: 'Fellow of the American Academy of Dermatology',
     acceptingNewPatients: true,
     headshotSrc: '/dr-hood-headshot.jpg',
-    officeImageSrc: '/golden-office.jpg',
+    shareImageSrc: '/og-image.jpg',
   },
 
   office: {
@@ -84,10 +85,20 @@ export const drHoodVerified = {
   },
 
   booking: {
-    ctaLabel: 'Book an Appointment',
-    href: 'https://www.usdermatologypartners.com/locations/colorado/golden/400-indiana-st-ste-380/#id=5596&reason_id=&ag%20by%20e=&group=Medical%20Dermatology',
+    heading: 'Book with Dr. Hood',
+    ctaLabel: 'See open times',
+    href: 'https://nextpatient.co/p/5596/60744/appointments',
+    scheduleOutcome: 'Books a specific time.',
+    scheduleDetail:
+      'Pick an open time on the U.S. Dermatology Partners scheduling site. If no full-body skin exam times show, call the office.',
+    callbackLabel: 'Request a callback',
+    callbackHref:
+      'https://www.usdermatologypartners.com/request-an-appointment/?state=Colorado&location=Golden',
+    callbackOutcome: 'Does not book a time.',
+    callbackDetail:
+      'Choose Dr. Hood as your provider. The office calls you back to schedule.',
     summary:
-      'Use the official U.S. Dermatology Partners appointment form to request a visit at the Golden office.',
+      'Choose an open time with Dr. Hood on the official U.S. Dermatology Partners scheduling site (books a specific time), send a callback request through the official Golden request form (does not book a time), or call the Golden office.',
   },
 
   firstVisit: {
@@ -150,8 +161,7 @@ export const drHoodVerified = {
     medical: [
       {
         title: 'Annual skin examinations',
-        description:
-          'Yearly skin checks and visits for new or changing spots.',
+        description: 'Yearly skin checks and visits for new or changing spots.',
       },
       {
         title: 'Skin cancer concerns',
@@ -276,9 +286,9 @@ export const drHoodVerified = {
         'Yes. Botox is publicly listed among services associated with the Golden office and Dr. Hood’s current practice.',
     },
     {
-      question: 'How do I request an appointment online?',
+      question: 'How do I book an appointment online?',
       answer:
-        'Use the official U.S. Dermatology Partners appointment form to request a visit at the Golden clinic.',
+        'To book a specific time, choose an open time with Dr. Hood on the U.S. Dermatology Partners scheduling site. To have the office find a time for you, send the Golden request form; the office calls you back to schedule.',
     },
     {
       question: 'What should I do before my first visit?',

@@ -1,6 +1,8 @@
 import { defineHandler } from 'nitro'
+import { requestContext, writeActivity } from './src/server/activityLog'
 import {
   agentGuideMarkdown,
+  llmsTxt,
   agentPaths,
   apiCatalogDocument,
   apiIndexPayload,
@@ -16,7 +18,6 @@ import {
   linkHeaderValues,
   mcpProtocolVersion,
   mcpServerCard,
-  mcpTools,
   officePayload,
   openApiDocument,
   profilePayload,
@@ -26,6 +27,11 @@ import {
   skillArtifacts,
   skillsIndex,
 } from './src/lib/agentReady'
+import { mcpTools } from './src/lib/mcpTools'
+import {
+  findAppointments,
+  findAppointmentsTool,
+} from './src/server/appointments'
 
 type JsonRpcRequest = {
   id?: number | string | null
@@ -57,7 +63,10 @@ function markdownResponse(markdown: string, init: ResponseInit = {}) {
   const headers = withBaseHeaders(init.headers)
   headers.set('Content-Type', 'text/markdown; charset=utf-8')
   headers.set('Vary', 'Accept')
-  headers.set('X-Markdown-Tokens', String(Math.max(1, Math.round(markdown.length / 4))))
+  headers.set(
+    'X-Markdown-Tokens',
+    String(Math.max(1, Math.round(markdown.length / 4))),
+  )
   return new Response(markdown, {
     ...init,
     headers,
@@ -115,7 +124,11 @@ function mcpError(
   )
 }
 
-async function handleMcpRequest(request: Request) {
+async function handleMcpRequest(
+  request: Request,
+  context: ReturnType<typeof requestContext>,
+  via: 'webmcp' | undefined,
+) {
   let rpcRequest: JsonRpcRequest
 
   try {
@@ -128,6 +141,10 @@ async function handleMcpRequest(request: Request) {
     'Content-Type': 'application/json; charset=utf-8',
     'MCP-Protocol-Version': mcpProtocolVersion,
   })
+
+  if (rpcRequest.method?.startsWith('notifications/')) {
+    return new Response(null, { status: 202 })
+  }
 
   if (rpcRequest.method === 'initialize') {
     return new Response(
@@ -169,21 +186,36 @@ async function handleMcpRequest(request: Request) {
 
   if (rpcRequest.method === 'tools/call') {
     const toolName =
-      typeof rpcRequest.params?.name === 'string' ? rpcRequest.params.name : null
+      typeof rpcRequest.params?.name === 'string'
+        ? rpcRequest.params.name
+        : null
 
     if (!toolName) {
       return mcpError(rpcRequest.id, -32602, 'Missing tool name', 400)
     }
 
-    try {
-      const result = callSiteTool(
-        toolName,
-        rpcRequest.params?.arguments as Record<string, unknown> | undefined,
-      )
+    writeActivity({
+      ...context,
+      k: 'mcp',
+      p: agentPaths.mcpEndpoint,
+      tool: toolName,
+      via,
+    })
 
-      return new Response(JSON.stringify(mcpSuccess(rpcRequest.id, result), null, 2), {
-        headers,
-      })
+    try {
+      const toolArguments = rpcRequest.params?.arguments as
+        Record<string, unknown> | undefined
+      const result =
+        toolName === 'find_appointments'
+          ? await findAppointmentsTool(toolArguments)
+          : callSiteTool(toolName, toolArguments)
+
+      return new Response(
+        JSON.stringify(mcpSuccess(rpcRequest.id, result), null, 2),
+        {
+          headers,
+        },
+      )
     } catch (error) {
       const message =
         error instanceof Error ? error.message : 'Unknown MCP tool error'
@@ -192,19 +224,50 @@ async function handleMcpRequest(request: Request) {
   }
 
   if (rpcRequest.method === 'ping') {
-    return new Response(JSON.stringify(mcpSuccess(rpcRequest.id, {}), null, 2), {
-      headers,
-    })
+    return new Response(
+      JSON.stringify(mcpSuccess(rpcRequest.id, {}), null, 2),
+      {
+        headers,
+      },
+    )
   }
 
   return mcpError(rpcRequest.id, -32601, 'Method not found', 404)
 }
+
+const loggedPaths = new Set<string>([
+  '/',
+  '/book',
+  ...Object.values(agentPaths),
+])
+const trackedEvents =
+  /^(?:(?:hero|closing|header|sticky|visit)_(?:schedule|callback|call)_click|directions_click|press_click|review_outbound_click|forms_click|insurance_source_click|faq_expand|book_(?:early_)?schedule_click|book_call_click|book_callback_click|book_filter_change|book_visit_switch|book_switch_note_click)$/
 
 export default defineHandler(async (event) => {
   const url = new URL(event.req.url, siteCanonical)
   const pathname = url.pathname
   const method = event.method
   const acceptHeader = event.req.headers.get('accept')
+  const context = requestContext(event.req.headers, url.hostname)
+
+  if (method === 'GET' && loggedPaths.has(pathname)) {
+    writeActivity({
+      ...context,
+      k: 'request',
+      p: pathname,
+      md: wantsMarkdown(acceptHeader) || undefined,
+    })
+  }
+
+  if (pathname === '/api/events') {
+    if (method !== 'POST') return textResponse('Use POST.', { status: 405 })
+    const name = (await event.req.text()).slice(0, 200)
+    const eventName = /^\{"e":"([a-z_]{3,40})"\}$/.exec(name)?.[1]
+    if (eventName && trackedEvents.test(eventName) && context.a === 'human') {
+      writeActivity({ ...context, k: 'event', p: '/', e: eventName })
+    }
+    return new Response(null, { status: 204 })
+  }
 
   if (pathname === '/' || pathname === '') {
     for (const linkHeaderValue of linkHeaderValues) {
@@ -224,7 +287,15 @@ export default defineHandler(async (event) => {
   }
 
   if (method === 'GET' && pathname === agentPaths.apiCatalog) {
-    return jsonResponse(apiCatalogDocument, {}, 'application/linkset+json; charset=utf-8')
+    return jsonResponse(
+      apiCatalogDocument,
+      {},
+      'application/linkset+json; charset=utf-8',
+    )
+  }
+
+  if (method === 'GET' && pathname === agentPaths.llmsTxt) {
+    return markdownResponse(llmsTxt)
   }
 
   if (method === 'GET' && pathname === agentPaths.agentGuide) {
@@ -237,7 +308,8 @@ export default defineHandler(async (event) => {
 
   if (method === 'GET' && pathname.startsWith('/.well-known/agent-skills/')) {
     const matchingSkill = skillArtifacts.find(
-      (skill) => `/.well-known/agent-skills/${skill.slug}/SKILL.md` === pathname,
+      (skill) =>
+        `/.well-known/agent-skills/${skill.slug}/SKILL.md` === pathname,
     )
 
     if (matchingSkill) {
@@ -250,7 +322,11 @@ export default defineHandler(async (event) => {
   }
 
   if (method === 'GET' && pathname === agentPaths.openApi) {
-    return jsonResponse(openApiDocument, {}, 'application/openapi+json; charset=utf-8')
+    return jsonResponse(
+      openApiDocument,
+      {},
+      'application/openapi+json; charset=utf-8',
+    )
   }
 
   if (method === 'GET' && pathname === agentPaths.apiIndex) {
@@ -297,22 +373,47 @@ export default defineHandler(async (event) => {
   }
 
   if (method === 'GET' && pathname === agentPaths.faq) {
-    return jsonResponse(getFaqResult(url.searchParams.get('question') || undefined))
+    return jsonResponse(
+      getFaqResult(url.searchParams.get('question') || undefined),
+    )
   }
 
   if (method === 'GET' && pathname === agentPaths.booking) {
     return jsonResponse(bookingPayload)
   }
 
+  if (method === 'GET' && pathname === agentPaths.appointments) {
+    try {
+      return jsonResponse(
+        await findAppointments(Object.fromEntries(url.searchParams)),
+      )
+    } catch {
+      return jsonResponse(
+        {
+          error: 'Open times could not be loaded.',
+          officialCalendar: bookingPayload.booking.href,
+          phone: contactPayload.phoneDisplay,
+        },
+        { status: 502 },
+      )
+    }
+  }
+
   if (method === 'GET' && pathname === agentPaths.search) {
     const limitParam = Number(url.searchParams.get('limit') || '8')
     const limit = Number.isFinite(limitParam) ? limitParam : 8
-    return jsonResponse(searchSiteContent(url.searchParams.get('q') || undefined, limit))
+    return jsonResponse(
+      searchSiteContent(url.searchParams.get('q') || undefined, limit),
+    )
   }
 
   if (pathname === agentPaths.mcpEndpoint) {
     if (method === 'POST') {
-      return handleMcpRequest(event.req)
+      return handleMcpRequest(
+        event.req,
+        context,
+        url.searchParams.get('via') === 'webmcp' ? 'webmcp' : undefined,
+      )
     }
 
     return textResponse(

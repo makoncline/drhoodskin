@@ -1,42 +1,68 @@
 import { createFileRoute } from '@tanstack/react-router'
-import { useEffect, useRef } from 'react'
-import {
-  ArrowRight,
-  CalendarDays,
-  ChevronDown,
-  ExternalLink,
-  FileText,
-  MapPin,
-  Phone,
-  ShieldCheck,
-} from 'lucide-react'
+import { useEffect, useState } from 'react'
+import { ArrowUpRight, ChevronDown, MapPin, Phone } from 'lucide-react'
 import { drHoodVerified } from '../content/drHoodVerified'
 import { trackEvent } from '../lib/analytics'
-import { buildWebMcpScript } from '../lib/webMcp'
+import { registerWebMcpTools } from '../lib/webMcp'
+import {
+  formatDayHours,
+  officeNow,
+  openingHoursSpecification,
+  weeklyHours,
+} from '../lib/officeHours'
+import { AppointmentCard } from '../components/AppointmentCard'
+import { OfficeStatus } from '../components/OfficeStatus'
+import { SiteFooter, SiteHeader } from '../components/SiteChrome'
 
 const content = drHoodVerified
+const siteUrl = 'https://drhoodskin.com'
+const shareImageUrl = `${siteUrl}${content.identity.shareImageSrc}`
+const shareImageAlt = `${content.identity.name}, board-certified dermatologist in Golden, Colorado`
 
 const physicianSchema = {
   '@context': 'https://schema.org',
   '@graph': [
     {
+      '@type': 'WebSite',
+      '@id': `${siteUrl}/#website`,
+      url: content.seo.canonical,
+      name: 'Dr. Channing Hood',
+      about: { '@id': `${siteUrl}/#physician` },
+    },
+    {
+      '@type': 'ProfilePage',
+      '@id': `${siteUrl}/#webpage`,
+      url: content.seo.canonical,
+      name: content.seo.title,
+      isPartOf: { '@id': `${siteUrl}/#website` },
+      mainEntity: { '@id': `${siteUrl}/#physician` },
+      primaryImageOfPage: `${siteUrl}${content.identity.headshotSrc}`,
+      dateModified: content.meta.lastReviewed,
+    },
+    {
       '@type': 'Physician',
-      '@id': 'https://drhoodskin.com/#physician',
+      '@id': `${siteUrl}/#physician`,
       name: content.identity.name,
       url: content.seo.canonical,
+      isAcceptingNewPatients: content.identity.acceptingNewPatients,
       image: `https://drhoodskin.com${content.identity.headshotSrc}`,
       jobTitle: content.identity.title,
       medicalSpecialty: 'Dermatology',
       telephone: '+1-720-604-0602',
       sameAs: [
         content.officialSources.provider,
+        content.externalSources.googleProfile,
         content.externalSources.healthgrades,
         content.externalSources.time,
         content.externalSources.publication,
       ],
       alumniOf: content.background.education.map((item) => ({
-        '@type': item.includes('internship') ? 'Hospital' : 'CollegeOrUniversity',
-        name: item.replace(' internship', '').replace(' dermatology residency', ''),
+        '@type': item.includes('internship')
+          ? 'Hospital'
+          : 'CollegeOrUniversity',
+        name: item
+          .replace(' internship', '')
+          .replace(' dermatology residency', ''),
       })),
       memberOf: [
         { '@type': 'Organization', name: 'American Academy of Dermatology' },
@@ -46,14 +72,32 @@ const physicianSchema = {
         },
       ],
       worksFor: { '@id': 'https://drhoodskin.com/#clinic' },
+      potentialAction: {
+        '@type': 'ReserveAction',
+        name: 'Choose an open appointment time with Dr. Hood',
+        description: content.booking.summary,
+        target: {
+          '@type': 'EntryPoint',
+          urlTemplate: content.booking.href,
+          actionPlatform: [
+            'https://schema.org/DesktopWebPlatform',
+            'https://schema.org/MobileWebPlatform',
+          ],
+        },
+      },
     },
     {
       '@type': 'MedicalClinic',
       '@id': 'https://drhoodskin.com/#clinic',
       name: content.office.name,
-      url: content.seo.canonical,
-      image: `https://drhoodskin.com${content.identity.officeImageSrc}`,
+      url: content.officialSources.goldenOffice,
       telephone: '+1-720-604-0602',
+      isAcceptingNewPatients: content.identity.acceptingNewPatients,
+      parentOrganization: {
+        '@type': 'MedicalOrganization',
+        name: 'U.S. Dermatology Partners',
+        url: 'https://www.usdermatologypartners.com/',
+      },
       hasMap: content.map.directionsHref,
       address: {
         '@type': 'PostalAddress',
@@ -63,14 +107,7 @@ const physicianSchema = {
         postalCode: content.office.zip,
         addressCountry: 'US',
       },
-      openingHoursSpecification: content.office.hours
-        .filter(([, hours]) => hours !== 'Closed')
-        .map(([day]) => ({
-          '@type': 'OpeningHoursSpecification',
-          dayOfWeek: day,
-          opens: '08:00',
-          closes: '16:30',
-        })),
+      openingHoursSpecification: openingHoursSpecification(),
       areaServed: content.office.areaServed,
     },
     {
@@ -88,48 +125,47 @@ const physicianSchema = {
   ],
 }
 
-type SourceLinkItem = {
-  href: string
-  label: string
-  onClick?: () => void
-}
+const trainingFrames = [
+  {
+    name: 'New York Medical College',
+    role: 'Dermatology residency. Chief resident in her final year.',
+    size: 'feature',
+  },
+  {
+    name: 'Louisiana State University School of Medicine',
+    role: 'Medical school',
+    size: 'wide',
+  },
+  { name: 'Ochsner Medical Center', role: 'Internship', size: 'small' },
+  { name: 'University of Notre Dame', role: null, size: 'small' },
+  {
+    name: 'Alpha Omega Alpha',
+    role: 'Medical honor society',
+    size: 'smallSolo',
+  },
+  {
+    name: 'American Academy of Dermatology',
+    role: 'Fellow (FAAD)',
+    size: 'wide',
+  },
+  {
+    name: 'American Society of Dermatologic Surgery',
+    role: 'Member',
+    size: 'wide',
+  },
+] as const
 
-function useReveal() {
-  const ref = useRef<HTMLElement>(null)
-  useEffect(() => {
-    const el = ref.current
-    if (!el) return
-    const observer = new IntersectionObserver(
-      ([entry]) => {
-        if (entry.isIntersecting) {
-          el.classList.add('revealed')
-          observer.disconnect()
-        }
-      },
-      { threshold: 0.1 },
-    )
-    observer.observe(el)
-    return () => observer.disconnect()
-  }, [])
-  return ref
-}
+const frameSpan = {
+  feature: 'col-span-2 md:col-span-5 md:row-span-2',
+  wide: 'col-span-1 md:col-span-4',
+  small: 'col-span-1 md:col-span-3',
+  smallSolo: 'col-span-1 md:col-span-3',
+} as const
 
-function RevealSection({
-  children,
-  className = '',
-  as: Tag = 'section',
-}: {
-  children: React.ReactNode
-  className?: string
-  as?: 'section' | 'footer'
-}) {
-  const ref = useReveal()
-  return (
-    <Tag ref={ref} className={`reveal-section ${className}`.trim()}>
-      {children}
-    </Tag>
-  )
-}
+const reviewSources = [
+  { label: 'Google', href: content.externalSources.googleProfile },
+  { label: 'Healthgrades', href: content.externalSources.healthgrades },
+]
 
 export const Route = createFileRoute('/')({
   head: () => ({
@@ -137,676 +173,574 @@ export const Route = createFileRoute('/')({
     meta: [
       { title: content.seo.title },
       { name: 'description', content: content.seo.description },
+      { name: 'theme-color', content: '#f7f5f2' },
       { property: 'og:title', content: content.seo.title },
       { property: 'og:description', content: content.seo.description },
-      { property: 'og:type', content: 'website' },
-      {
-        property: 'og:image',
-        content: `https://drhoodskin.com${content.identity.headshotSrc}`,
-      },
+      { property: 'og:type', content: 'profile' },
+      { property: 'og:url', content: content.seo.canonical },
+      { property: 'og:site_name', content: 'Dr. Channing Hood' },
+      { property: 'og:locale', content: 'en_US' },
+      { property: 'og:image', content: shareImageUrl },
+      { property: 'og:image:width', content: '1200' },
+      { property: 'og:image:height', content: '630' },
+      { property: 'og:image:alt', content: shareImageAlt },
       { name: 'twitter:card', content: 'summary_large_image' },
+      { name: 'twitter:title', content: content.seo.title },
+      { name: 'twitter:description', content: content.seo.description },
+      { name: 'twitter:image', content: shareImageUrl },
+      { name: 'twitter:image:alt', content: shareImageAlt },
     ],
   }),
   component: Home,
 })
 
 function Home() {
+  useEffect(registerWebMcpTools, [])
+
   return (
-    <main className="min-h-screen bg-[var(--paper)] pb-24 text-[var(--ink)] sm:pb-0">
+    <>
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(physicianSchema) }}
       />
-      <script dangerouslySetInnerHTML={{ __html: buildWebMcpScript() }} />
+      <a
+        href="#appointment"
+        className="sr-only z-[60] rounded-lg bg-action px-4 py-2 font-semibold text-white focus:not-sr-only focus:fixed focus:top-3 focus:left-3"
+      >
+        Skip to appointment options
+      </a>
+      <SiteHeader />
+      <main className="pb-24 md:pb-0">
+        <Hero />
+        <PatientWords />
+        <TrainingWall />
+        <VisitOffice />
+        <FirstVisit />
+        <ServicesParked />
+        <Questions />
+        <Closing />
+      </main>
+      <SiteFooter clearMobileBar />
+      <MobileActionBar />
+    </>
+  )
+}
 
-      <header className="sticky top-0 z-40 hidden border-b border-[var(--line)] bg-[var(--paper-strong)] backdrop-blur sm:block">
-        <div className="mx-auto flex max-w-7xl items-center justify-end gap-3 px-6 py-3 lg:px-8">
-          <a
-            href={content.office.phoneHref}
-            onClick={() => trackEvent('sticky_call_click')}
-            className="inline-flex shrink-0 items-center gap-2 whitespace-nowrap rounded-full border border-[var(--line)] px-3 py-2 text-sm font-semibold text-[var(--ink)] transition hover:border-[var(--accent-strong)] hover:text-[var(--accent-strong)]"
-          >
-            <Phone className="h-4 w-4" />
-            Call {content.office.phoneDisplay}
-          </a>
-          <a
-            href={content.booking.href}
-            onClick={() => trackEvent('sticky_book_click')}
-            className="inline-flex shrink-0 items-center gap-2 whitespace-nowrap rounded-full bg-[var(--accent)] px-4 py-2 text-sm font-semibold text-white transition hover:bg-[var(--accent-strong)]"
-          >
-            <CalendarDays className="h-4 w-4" />
-            {content.booking.ctaLabel}
-          </a>
-        </div>
-      </header>
-
-      <RevealSection className="section-wrap grid gap-10 py-10 lg:grid-cols-[minmax(0,1.02fr)_24rem] lg:items-center lg:gap-14 lg:py-16">
-        <div>
-          <p className="mb-3 text-[0.72rem] font-semibold uppercase tracking-[0.4em] text-[var(--accent)]">
+function Hero() {
+  return (
+    <div id="top" className="bg-paper">
+      <div className="shell grid grid-cols-[5.5rem_minmax(0,1fr)] gap-x-4 gap-y-5 pt-7 pb-12 [grid-template-areas:'name_name''photo_lede''card_card'] sm:grid-cols-[8rem_minmax(0,1fr)] md:grid-cols-[minmax(0,1fr)_minmax(16rem,21rem)] md:gap-x-16 md:gap-y-7 md:pt-16 md:pb-20 md:[grid-template-areas:'name_photo''lede_photo''card_photo']">
+        <h1 className="m-0 [grid-area:name]">
+          <span className="block font-display text-[clamp(2.1rem,6vw,3.6rem)] leading-[1.05] font-normal tracking-[-0.015em]">
             {content.identity.name}
-          </p>
-          <h1 className="max-w-4xl font-display text-[clamp(2.4rem,8vw,5.4rem)] leading-[0.94] tracking-[-0.05em]">
-            Board-Certified Dermatology Care in Golden
-          </h1>
-          <p className="mt-6 max-w-2xl text-lg leading-8 text-[var(--muted)]">
-            Thoughtful, evidence-based dermatology care for adults and children
-            in Golden and west Denver. Accepting new patients at{' '}
-            {content.office.name}.
+          </span>
+          <span className="mt-3 block text-[clamp(1.1rem,2vw,1.35rem)] leading-snug font-semibold text-ink-muted md:mt-4">
+            Board-certified dermatologist in Golden, Colorado
+          </span>
+        </h1>
+
+        <p className="m-0 self-center text-base leading-snug text-ink-muted [grid-area:lede] sm:text-[1.05rem] sm:leading-relaxed md:self-start md:text-xl md:leading-relaxed">
+          Dr. Hood sees adults and children at {content.office.name}, in Red
+          Rocks Medical Center.{' '}
+          <span className="font-semibold text-ink">
+            Accepting new patients.
+          </span>
+        </p>
+
+        <figure className="m-0 self-start [grid-area:photo] md:row-span-3">
+          <div className="frame portrait-settle p-[3px] md:p-1.5">
+            <div className="frame-mat p-[6%] md:p-[8%]">
+              <img
+                src={content.identity.headshotSrc}
+                alt={`Portrait of ${content.identity.name}`}
+                width={693}
+                height={780}
+                className="block aspect-[693/780] w-full object-cover"
+                loading="eager"
+                fetchPriority="high"
+              />
+            </div>
+          </div>
+          <figcaption className="mt-4 hidden text-[0.95rem] leading-snug text-ink-muted md:block">
+            <span className="block font-semibold text-ink">
+              {content.identity.title}
+            </span>
+            {content.identity.fellowship}. Chief resident at New York Medical
+            College.
+          </figcaption>
+        </figure>
+
+        <div className="[grid-area:card]">
+          <AppointmentCard
+            id="appointment"
+            headingId="appointment-heading"
+            placement="hero"
+          />
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function TrainingWall() {
+  return (
+    <section aria-labelledby="training-heading" className="bg-stone">
+      <div className="shell py-16 md:py-24">
+        <h2 id="training-heading" className="section-heading">
+          Training and recognition
+        </h2>
+
+        <ul
+          role="list"
+          className="mt-10 grid list-none grid-cols-2 items-center gap-3 p-0 md:mt-12 md:grid-cols-12 md:gap-6"
+        >
+          {trainingFrames.map((frame) => (
+            <li key={frame.name} className={frameSpan[frame.size]}>
+              <div className="frame frame-quiet">
+                <div
+                  className={`frame-mat flex flex-col items-center justify-center px-3 text-center ${
+                    frame.size === 'feature' ? 'py-7 md:py-14' : 'py-4 md:py-7'
+                  }`}
+                >
+                  <p
+                    className={`m-0 font-display leading-tight ${
+                      frame.size === 'feature'
+                        ? 'text-xl md:text-[1.7rem]'
+                        : 'text-base md:text-[1.05rem]'
+                    }`}
+                  >
+                    {frame.name}
+                  </p>
+                  {frame.role ? (
+                    <p className="mt-1.5 mb-0 text-sm leading-snug text-ink-muted md:text-[0.95rem]">
+                      {frame.role}
+                    </p>
+                  ) : null}
+                </div>
+              </div>
+            </li>
+          ))}
+        </ul>
+
+        <p className="mt-6 mb-0 text-[0.95rem] text-ink-muted">
+          Training and memberships as listed on{' '}
+          <a href={content.officialSources.provider} className="text-link">
+            Dr. Hood’s U.S. Dermatology Partners profile
+          </a>
+          .
+        </p>
+
+        <div className="mt-14 grid gap-6 md:grid-cols-2">
+          {content.elsewhereOnline.map((item) => (
+            <a
+              key={item.label}
+              href={item.href}
+              onClick={() => trackEvent('press_click', { label: item.label })}
+              className="group flex items-center justify-between gap-4 border-t border-ink/25 pt-5 no-underline"
+            >
+              <span className="font-display text-xl md:text-2xl">
+                {item.label}
+              </span>
+              <ArrowUpRight
+                aria-hidden="true"
+                className="h-5 w-5 shrink-0 text-action transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5"
+              />
+            </a>
+          ))}
+        </div>
+      </div>
+    </section>
+  )
+}
+
+function PatientWords() {
+  return (
+    <section aria-labelledby="reviews-heading" className="bg-card">
+      <div className="shell py-16 md:py-24">
+        <h2 id="reviews-heading" className="section-heading">
+          What patients say
+        </h2>
+
+        <div className="mt-10 grid gap-10 md:grid-cols-2 md:gap-14">
+          {content.reviews.map((review) => (
+            <figure
+              key={`${review.author}-${review.dateLabel}`}
+              className="m-0"
+            >
+              <blockquote className="m-0 border-t border-ink/25 pt-6">
+                <p className="m-0 font-display text-[1.35rem] leading-snug md:text-[1.6rem] md:leading-snug">
+                  “{review.quote}”
+                </p>
+              </blockquote>
+              <figcaption className="mt-4 text-[0.95rem] text-ink-muted">
+                <span className="font-semibold text-ink">{review.author}</span>,{' '}
+                {review.sourceLabel} review, {review.dateLabel}
+              </figcaption>
+            </figure>
+          ))}
+        </div>
+
+        <p className="mt-12 mb-0 text-ink-muted">
+          Read more reviews, or leave one after your visit:{' '}
+          {reviewSources.map((source, index) => (
+            <span key={source.label}>
+              {index > 0 ? ' · ' : null}
+              <a
+                href={source.href}
+                onClick={() =>
+                  trackEvent('review_outbound_click', { source: source.label })
+                }
+                className="text-link"
+              >
+                {source.label}
+              </a>
+            </span>
+          ))}
+        </p>
+      </div>
+    </section>
+  )
+}
+
+function ServicesParked() {
+  return (
+    <section
+      aria-labelledby="services-heading"
+      className="border-t border-rule bg-paper"
+    >
+      <div className="shell py-16 md:py-24">
+        <h2 id="services-heading" className="section-heading max-w-2xl">
+          Medical dermatology first, procedures second.
+        </h2>
+
+        <div className="mt-10 grid gap-10 md:grid-cols-[minmax(0,1fr)_18rem] md:gap-14">
+          <div>
+            <h3 className="m-0 text-base font-semibold">Medical dermatology</h3>
+            <ul
+              role="list"
+              className="mt-3 grid list-none gap-x-8 p-0 sm:grid-cols-2"
+            >
+              {content.services.medical.map((service) => (
+                <li key={service.title} className="border-t border-rule">
+                  <details className="group">
+                    <summary className="flex min-h-12 cursor-pointer list-none items-center justify-between gap-4 py-3 font-semibold [&::-webkit-details-marker]:hidden">
+                      {service.title}
+                      <ChevronDown
+                        aria-hidden="true"
+                        className="h-4 w-4 shrink-0 text-ink-muted transition-transform group-open:rotate-180"
+                      />
+                    </summary>
+                    <p className="mt-0 mb-4 pr-8 text-ink-muted">
+                      {service.description}
+                    </p>
+                  </details>
+                </li>
+              ))}
+            </ul>
+          </div>
+          <div>
+            <h3 className="m-0 text-base font-semibold">
+              Procedures / cosmetic
+            </h3>
+            <ul role="list" className="mt-3 list-none p-0">
+              {content.services.procedures.map((service) => (
+                <li key={service.title} className="border-t border-rule py-3">
+                  <p className="m-0 font-semibold">{service.title}</p>
+                  <p className="mt-1 mb-0 text-ink-muted">
+                    {service.description}
+                  </p>
+                </li>
+              ))}
+            </ul>
+          </div>
+        </div>
+      </div>
+    </section>
+  )
+}
+
+function useOfficeToday() {
+  const [today, setToday] = useState<string | null>(null)
+  useEffect(() => setToday(officeNow().day), [])
+  return today
+}
+
+function VisitOffice() {
+  const today = useOfficeToday()
+
+  return (
+    <section id="visit" aria-labelledby="visit-heading" className="bg-paper">
+      <div className="shell grid gap-12 py-16 md:grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)] md:gap-16 md:py-24">
+        <div>
+          <h2 id="visit-heading" className="section-heading">
+            Visit the Golden office
+          </h2>
+
+          <address className="mt-6 text-lg leading-relaxed not-italic">
+            <span className="block font-semibold">{content.office.name}</span>
+            {content.office.address1}
+            <br />
+            {content.office.city}, {content.office.state} {content.office.zip}
+          </address>
+          <p className="mt-3 mb-0 text-ink-muted">
+            {content.office.locationNote}
           </p>
 
-          <div className="mt-8 flex flex-col gap-3 sm:flex-row">
+          <div className="mt-6 flex flex-col gap-3 sm:flex-row">
             <a
-              href={content.booking.href}
-              onClick={() => trackEvent('hero_book_click')}
-              className="inline-flex w-full items-center justify-center gap-2 whitespace-nowrap rounded-full bg-[var(--accent)] px-5 py-3.5 text-base font-semibold text-white transition hover:bg-[var(--accent-strong)] sm:w-auto sm:px-6"
+              href={content.map.directionsHref}
+              onClick={() => trackEvent('directions_click')}
+              className="btn-secondary"
             >
-              {content.booking.ctaLabel}
-              <ArrowRight className="h-4 w-4" />
+              <MapPin aria-hidden="true" className="h-4.5 w-4.5" />
+              Get directions
             </a>
             <a
               href={content.office.phoneHref}
-              onClick={() => trackEvent('hero_call_click')}
-              className="inline-flex w-full items-center justify-center gap-2 whitespace-nowrap rounded-full border border-[var(--line-strong)] bg-white px-5 py-3.5 text-base font-semibold text-[var(--ink)] transition hover:border-[var(--accent-strong)] hover:text-[var(--accent-strong)] sm:w-auto sm:px-6"
+              onClick={() => trackEvent('visit_call_click')}
+              className="btn-secondary"
             >
-              <Phone className="h-4 w-4" />
-              Call {content.office.phoneDisplay}
+              <Phone aria-hidden="true" className="h-4.5 w-4.5" />
+              {content.office.phoneDisplay}
             </a>
           </div>
 
-          <p className="mt-6 flex items-start gap-2 text-sm leading-7 text-[var(--muted)]">
-            <MapPin className="mt-1 h-4 w-4 shrink-0 text-[var(--accent)]" />
-            <span>
-              {content.office.name}, {content.office.address1},{' '}
-              {content.office.city}, {content.office.state} {content.office.zip}
-            </span>
+          <h3 className="mt-10 mb-0 text-base font-semibold">Office hours</h3>
+          <OfficeStatus className="mt-2 text-ink-muted" />
+          <table className="mt-4 w-full max-w-md border-collapse text-left tabular-nums">
+            <caption className="sr-only">
+              Golden office hours, Mountain Time
+            </caption>
+            <tbody>
+              {weeklyHours.map((entry) => {
+                const isToday = entry.day === today
+                return (
+                  <tr
+                    key={entry.day}
+                    aria-current={isToday ? 'date' : undefined}
+                    className={`border-t border-rule ${isToday ? 'bg-action-tint' : ''}`}
+                  >
+                    <th scope="row" className="py-2.5 pl-2 font-semibold">
+                      {entry.day}
+                      {isToday ? (
+                        <span className="ml-2 text-sm text-action">Today</span>
+                      ) : null}
+                    </th>
+                    <td
+                      className={`py-2.5 pr-2 text-right ${'closed' in entry ? 'text-ink-muted' : ''}`}
+                    >
+                      {formatDayHours(entry)}
+                    </td>
+                  </tr>
+                )
+              })}
+            </tbody>
+          </table>
+        </div>
+
+        <div className="md:pt-2">
+          <div className="frame">
+            <iframe
+              title="Map of U.S. Dermatology Partners Golden at 400 Indiana St, Golden, Colorado"
+              src={content.map.embedSrc}
+              className="block aspect-[4/3] w-full border-0 bg-card md:aspect-[4/5]"
+              loading="lazy"
+              referrerPolicy="no-referrer-when-downgrade"
+            />
+          </div>
+          <p className="mt-3 mb-0 text-[0.95rem] text-ink-muted">
+            Serving {content.office.areaServed.slice(0, -1).join(', ')}, and{' '}
+            {content.office.areaServed.at(-1)}.
           </p>
-
-          <SourceLinks
-            className="mt-5"
-            links={[
-              {
-                href: content.officialSources.provider,
-                label: 'Provider page',
-              },
-              {
-                href: content.officialSources.goldenOffice,
-                label: 'Golden office page',
-              },
-            ]}
-          />
         </div>
+      </div>
+    </section>
+  )
+}
 
-        <div className="lg:justify-self-end">
-          <figure className="relative overflow-hidden rounded-[1.75rem] border border-[var(--line)] bg-[var(--surface)] shadow-[var(--shadow-soft)] before:absolute before:inset-0 before:bg-gradient-to-t before:from-[var(--paper)] before:to-transparent before:opacity-20">
-            <img
-              src={content.identity.headshotSrc}
-              alt={content.identity.name}
-              className="aspect-[4/5] w-full object-cover"
-              loading="eager"
-            />
-          </figure>
-        </div>
-      </RevealSection>
+function FirstVisit() {
+  const forms = [
+    {
+      href: content.firstVisit.onlineFormsUrl,
+      label: content.firstVisit.onlineFormsLabel,
+      type: 'online',
+    },
+    {
+      href: content.firstVisit.printableFormsUrl,
+      label: `${content.firstVisit.printableFormsLabel} (PDF)`,
+      type: 'printable',
+    },
+    {
+      href: content.firstVisit.healthHistoryUrl,
+      label: content.firstVisit.healthHistoryLabel,
+      type: 'history',
+    },
+  ]
 
-      <RevealSection className="section-wrap border-t border-[var(--line)] py-6 lg:py-8">
-        <div className="flex flex-wrap gap-2">
-          {content.trustChips.map((chip) => (
-            <span
-              key={chip}
-              className="inline-flex items-center gap-2 rounded-full border border-[var(--accent)]/20 bg-[var(--accent-soft)] px-3.5 py-2 text-sm font-medium text-[var(--ink)]"
-            >
-              <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-[var(--accent)]" />
-              {chip}
-            </span>
-          ))}
-        </div>
-      </RevealSection>
-
-      <RevealSection className="section-wrap border-t border-[var(--line)] py-12 lg:py-14">
-        <div className="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
-          <div>
-            <p className="eyebrow">Why choose Dr. Hood in Golden</p>
-            <h2 className="section-title">Local care with the medical focus people actually need.</h2>
-          </div>
-          <SourceLinks
-            links={[
-              {
-                href: content.officialSources.goldenOffice,
-                label: 'Golden office page',
-              },
-              {
-                href: content.officialSources.goldenNews,
-                label: 'Golden office announcement',
-              },
-            ]}
-          />
-        </div>
-
-        <div className="mt-8 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-          {content.whyChoose.map((item) => (
-            <div
-              key={item.title}
-              className="border-t border-[var(--line)] pt-4"
-            >
-              <ShieldCheck className="h-4 w-4 text-[var(--accent)]" />
-              <h3 className="mt-3 text-base font-semibold">{item.title}</h3>
-              <p className="mt-3 text-sm leading-7 text-[var(--muted)]">
-                {item.description}
-              </p>
-            </div>
-          ))}
-        </div>
-      </RevealSection>
-
-      <RevealSection className="section-wrap border-t border-[var(--line)] py-12 lg:py-14">
-        <div className="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
-          <div>
-            <p className="eyebrow">Conditions treated</p>
-            <h2 className="section-title">Medical dermatology first, procedures second.</h2>
-          </div>
-          <SourceLinks
-            links={[
-              {
-                href: content.officialSources.provider,
-                label: 'Provider page',
-              },
-              {
-                href: content.officialSources.goldenOffice,
-                label: 'Golden office page',
-              },
-            ]}
-          />
-        </div>
-
-        <div className="mt-8 grid gap-8 lg:grid-cols-[minmax(0,1fr)_20rem]">
-          <div>
-            <p className="eyebrow">Medical dermatology</p>
-            <div className="grid gap-x-8 gap-y-2 md:grid-cols-2">
-              {content.services.medical.map((service) => (
-                <details
-                  key={service.title}
-                  className="group border-t border-[var(--line)]"
-                >
-                  <summary className="flex cursor-pointer list-none items-center justify-between gap-4 py-3 text-base font-medium [&::-webkit-details-marker]:hidden">
-                    <span className="min-w-0">{service.title}</span>
-                    <ChevronDown className="h-4 w-4 shrink-0 text-[var(--muted)] transition group-open:rotate-180" />
-                  </summary>
-                  <p className="pb-4 pr-8 text-sm leading-7 text-[var(--muted)]">
-                    {service.description}
-                  </p>
-                </details>
-              ))}
-            </div>
-          </div>
-
-          <div className="border-t border-[var(--line)] pt-5 lg:pt-0">
-            <p className="eyebrow">Procedures / cosmetic</p>
-            <div className="space-y-4">
-              {content.services.procedures.map((service) => (
-                <div
-                  key={service.title}
-                  className="border-t border-[var(--line)] py-4"
-                >
-                  <p className="m-0 text-base font-semibold">{service.title}</p>
-                  <p className="mt-2 text-sm leading-7 text-[var(--muted)]">
-                    {service.description}
-                  </p>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-      </RevealSection>
-
-      <RevealSection className="section-wrap border-t border-[var(--line)] py-12 lg:py-14">
-        <div className="grid gap-10 lg:grid-cols-[minmax(0,1fr)_18rem]">
-          <div>
-            <p className="eyebrow">About Dr. Hood</p>
-            <h2 className="section-title">Source-backed training and current Golden practice.</h2>
-            <p className="mt-6 max-w-3xl text-base leading-8 text-[var(--muted)]">
-              {content.background.summary}
-            </p>
-
-            <div className="mt-8 grid gap-6 md:grid-cols-2">
-              <div className="border-t border-[var(--line)] pt-5">
-                <p className="eyebrow">Training</p>
-                <ul className="space-y-2 text-sm leading-7 text-[var(--muted)]">
-                  {content.background.education.map((item) => (
-                    <li key={item}>{item}</li>
-                  ))}
-                </ul>
-              </div>
-              <div className="border-t border-[var(--line)] pt-5">
-                <p className="eyebrow">Affiliations</p>
-                <ul className="space-y-2 text-sm leading-7 text-[var(--muted)]">
-                  {content.background.distinctions.map((item) => (
-                    <li key={item}>{item}</li>
-                  ))}
-                </ul>
-              </div>
-            </div>
-
-            <SourceLinks
-              className="mt-6"
-              links={[
-                {
-                  href: content.officialSources.provider,
-                  label: 'Provider page',
-                },
-                {
-                  href: content.officialSources.goldenNews,
-                  label: 'Golden office announcement',
-                },
-              ]}
-            />
-          </div>
-
-          <div className="border-t border-[var(--line)] pt-5 lg:pt-0">
-            <p className="eyebrow">Additional credibility</p>
-            <div className="mt-3 flex flex-col gap-3">
-              {content.elsewhereOnline.map((item) => (
-                <a
-                  key={item.label}
-                  href={item.href}
-                  className="flex items-center gap-2 text-sm font-semibold text-[var(--ink)] transition hover:text-[var(--accent-strong)]"
-                >
-                  {item.label}
-                  <ExternalLink className="h-4 w-4 shrink-0" />
-                </a>
-              ))}
-            </div>
-          </div>
-        </div>
-      </RevealSection>
-
-      <RevealSection className="section-wrap border-t border-[var(--line)] py-12 lg:py-14">
-        <div className="rounded-2xl bg-[var(--surface)] p-6 shadow-[var(--shadow-soft)] lg:p-8">
-          <div className="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
-            <div>
-              <p className="eyebrow">What patients say</p>
-              <h2 className="section-title">Official office reviews, kept simple.</h2>
-            </div>
-            <SourceLinks
-              links={[
-                {
-                  href: content.officialSources.goldenOffice,
-                  label: 'Golden office page',
-                },
-              ]}
-            />
-          </div>
-
-          <div className="mt-8 flex flex-col gap-4 md:grid md:grid-cols-2">
-            {content.reviews.map((review) => (
-              <article
-                key={`${review.author}-${review.dateLabel}`}
-                className="rounded-2xl border border-[var(--line)] bg-[var(--surface)] p-5 shadow-sm"
+  return (
+    <section
+      id="first-visit"
+      aria-labelledby="first-visit-heading"
+      className="bg-card"
+    >
+      <div className="shell grid gap-12 py-16 md:grid-cols-2 md:gap-16 md:py-24">
+        <div>
+          <h2 id="first-visit-heading" className="section-heading">
+            Before your first visit
+          </h2>
+          <p className="mt-4 mb-0 text-lg leading-relaxed text-ink-muted">
+            {content.firstVisit.summary}
+          </p>
+          <ul role="list" className="mt-6 list-none p-0">
+            {forms.map((form) => (
+              <li
+                key={form.type}
+                className="border-t border-rule last:border-b"
               >
-                <span className="text-4xl font-display leading-none text-[var(--accent)] opacity-40">
-                  &ldquo;
-                </span>
-                <p className="mt-2 text-base leading-8 text-[var(--ink)]">
-                  {review.quote}
-                </p>
-                <p className="mt-4 text-sm text-[var(--muted)]">
-                  {review.author} · Source: {review.sourceLabel} · {review.dateLabel}
-                </p>
-              </article>
+                <a
+                  href={form.href}
+                  onClick={() => trackEvent('forms_click', { type: form.type })}
+                  className="group flex min-h-14 items-center justify-between gap-4 py-3 font-semibold no-underline hover:text-action"
+                >
+                  {form.label}
+                  <ArrowUpRight
+                    aria-hidden="true"
+                    className="h-4.5 w-4.5 shrink-0 text-action transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5"
+                  />
+                </a>
+              </li>
             ))}
-          </div>
+          </ul>
+        </div>
 
+        <div className="md:pt-[4.6rem]">
+          <h3 className="m-0 text-xl font-semibold">Insurance</h3>
+          <p className="mt-3 mb-0 text-lg leading-relaxed">
+            {content.insurance.summary}
+          </p>
+          <p className="mt-3 mb-0 leading-relaxed text-ink-muted">
+            {content.insurance.disclaimer}
+          </p>
           <a
-            href={content.externalSources.healthgrades}
-            target="_blank"
-            rel="noreferrer"
-            onClick={() => trackEvent('review_outbound_click')}
-            className="mt-6 inline-flex items-center gap-2 text-sm font-semibold text-[var(--ink)] transition hover:text-[var(--accent-strong)]"
+            href={content.officialSources.insurance}
+            onClick={() => trackEvent('insurance_source_click')}
+            className="text-link mt-5 inline-flex items-center gap-1.5"
           >
-            {content.reviewOutboundLabel}
-            <ExternalLink className="h-4 w-4" />
+            Insurance information from U.S. Dermatology Partners
+            <ArrowUpRight aria-hidden="true" className="h-4 w-4" />
           </a>
         </div>
-      </RevealSection>
+      </div>
+    </section>
+  )
+}
 
-      <RevealSection className="section-wrap border-t border-[var(--line)] py-12 lg:py-14">
-        <div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_24rem] lg:gap-12">
-          <div>
-            <p className="eyebrow">Visit the Golden clinic</p>
-            <h2 className="section-title">Address, map, phone, and weekday hours in one place.</h2>
-            <p className="mt-5 max-w-2xl text-base leading-7 text-[var(--muted)]">
-              {content.office.locationNote}
-            </p>
-
-            <div className="mt-8 overflow-hidden rounded-[1.5rem] border border-[var(--line)] bg-[var(--surface)] shadow-[var(--shadow-soft)]">
-              <iframe
-                title="Map to U.S. Dermatology Partners Golden"
-                src={content.map.embedSrc}
-                className="h-[320px] w-full border-0"
-                loading="lazy"
-                referrerPolicy="no-referrer-when-downgrade"
-              />
-            </div>
-
-            <SourceLinks
-              className="mt-6"
-              links={[
-                {
-                  href: content.officialSources.goldenOffice,
-                  label: 'Golden office page',
-                },
-                {
-                  href: content.officialSources.goldenNews,
-                  label: 'Golden office announcement',
-                },
-              ]}
-            />
-          </div>
-
-          <div className="border-t border-[var(--line)] pt-5 lg:pt-0">
-            <div className="space-y-6 divide-y divide-[var(--line)]">
-              <div className="pb-1">
-                <p className="eyebrow">Address</p>
-                <p className="mt-2 text-lg font-semibold">
-                  {content.office.address1}
-                </p>
-                <p className="text-lg font-semibold">
-                  {content.office.city}, {content.office.state} {content.office.zip}
-                </p>
-              </div>
-
-              <div className="pt-6">
-                <p className="eyebrow">Contact</p>
-                <div className="mt-2 flex flex-col items-start gap-4">
-                  <a
-                    href={content.office.phoneHref}
-                    className="inline-flex items-center gap-2 whitespace-nowrap text-lg font-semibold text-[var(--ink)] transition hover:text-[var(--accent-strong)]"
-                  >
-                    <Phone className="h-4 w-4" />
-                    {content.office.phoneDisplay}
-                  </a>
-                  <a
-                    href={content.map.directionsHref}
-                    onClick={() => trackEvent('directions_click')}
-                    className="inline-flex items-center gap-2 text-sm font-semibold text-[var(--ink)] transition hover:text-[var(--accent-strong)]"
-                  >
-                    Get directions
-                    <ExternalLink className="h-4 w-4" />
-                  </a>
-                </div>
-              </div>
-
-              <div className="pt-6">
-                <p className="eyebrow">Hours</p>
-                <dl className="mt-3 space-y-2 text-base">
-                  {content.office.hours.map(([day, hours]) => (
-                    <div
-                      key={day}
-                      className="flex flex-col gap-1 border-b border-[var(--line)] py-2 sm:flex-row sm:items-center sm:justify-between"
-                    >
-                      <dt className="font-medium">{day}</dt>
-                      <dd className="text-[var(--muted)]">{hours}</dd>
-                    </div>
-                  ))}
-                </dl>
-              </div>
-            </div>
-          </div>
-        </div>
-      </RevealSection>
-
-      <RevealSection className="section-wrap border-t border-[var(--line)] py-12 lg:py-14">
-        <div className="rounded-2xl bg-[var(--surface)] p-6 lg:p-8">
-          <div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_18rem]">
-            <div>
-              <p className="eyebrow">Insurance &amp; first visit</p>
-            <h2 className="section-title">Reduce booking friction before the appointment.</h2>
-            <p className="mt-5 max-w-3xl text-base leading-8 text-[var(--muted)]">
-              {content.insurance.summary} {content.insurance.disclaimer}
-            </p>
-
-            <div className="mt-8 grid gap-4 md:grid-cols-2">
-              <div className="border-t border-[var(--line)] pt-5">
-                <FileText className="h-4 w-4 text-[var(--accent)]" />
-                <h3 className="mt-4 text-base font-semibold">Before your first visit</h3>
-                <p className="mt-3 text-sm leading-7 text-[var(--muted)]">
-                  {content.firstVisit.summary}
-                </p>
-                <div className="mt-5 flex flex-col items-start gap-3">
-                  <a
-                    href={content.firstVisit.onlineFormsUrl}
-                    target="_blank"
-                    rel="noreferrer"
-                    onClick={() => trackEvent('forms_click', { type: 'online' })}
-                    className="inline-flex items-center gap-2 rounded-full bg-[var(--accent)] px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-[var(--accent-strong)]"
-                  >
-                    {content.firstVisit.onlineFormsLabel}
-                  </a>
-                  <a
-                    href={content.firstVisit.printableFormsUrl}
-                    target="_blank"
-                    rel="noreferrer"
-                    onClick={() => trackEvent('forms_click', { type: 'printable' })}
-                    className="inline-flex items-center gap-2 text-sm font-semibold text-[var(--ink)] transition hover:text-[var(--accent-strong)]"
-                  >
-                    {content.firstVisit.printableFormsLabel}
-                    <ExternalLink className="h-4 w-4" />
-                  </a>
-                  <a
-                    href={content.firstVisit.healthHistoryUrl}
-                    target="_blank"
-                    rel="noreferrer"
-                    onClick={() => trackEvent('forms_click', { type: 'history' })}
-                    className="inline-flex items-center gap-2 text-sm font-semibold text-[var(--ink)] transition hover:text-[var(--accent-strong)]"
-                  >
-                    {content.firstVisit.healthHistoryLabel}
-                    <ExternalLink className="h-4 w-4" />
-                  </a>
-                </div>
-              </div>
-
-              <div className="border-t border-[var(--line)] pt-5">
-                <ShieldCheck className="h-4 w-4 text-[var(--accent)]" />
-                <h3 className="mt-4 text-base font-semibold">Insurance</h3>
-                <p className="mt-3 text-sm leading-7 text-[var(--muted)]">
-                  {content.insurance.summary}
-                </p>
-                <p className="mt-3 text-sm leading-7 text-[var(--muted)]">
-                  {content.insurance.disclaimer}
-                </p>
-                <a
-                  href={content.officialSources.insurance}
-                  onClick={() => trackEvent('insurance_source_click')}
-                  className="mt-5 inline-flex items-center gap-2 text-sm font-semibold text-[var(--ink)] transition hover:text-[var(--accent-strong)]"
-                >
-                  Official insurance information
-                  <ExternalLink className="h-4 w-4" />
-                </a>
-              </div>
-            </div>
-          </div>
-
-          <div className="border-t border-[var(--line)] pt-5 lg:pt-0">
-            <p className="eyebrow">Official source</p>
-            <div className="space-y-3">
-              <a
-                href={content.officialSources.patientForms}
-                className="inline-flex items-center gap-2 text-sm font-semibold text-[var(--ink)] transition hover:text-[var(--accent-strong)]"
-              >
-                Patient forms page
-                <ExternalLink className="h-4 w-4" />
-              </a>
-              <a
-                href={content.officialSources.insurance}
-                onClick={() => trackEvent('insurance_source_click')}
-                className="inline-flex items-center gap-2 text-sm font-semibold text-[var(--ink)] transition hover:text-[var(--accent-strong)]"
-              >
-                Insurance information
-                <ExternalLink className="h-4 w-4" />
-              </a>
-            </div>
-          </div>
-        </div>
-        </div>
-      </RevealSection>
-
-      <RevealSection className="section-wrap border-t border-[var(--line)] py-12 lg:py-14">
-        <div className="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
-          <div>
-            <p className="eyebrow">FAQ</p>
-            <h2 className="section-title">Short answers before you book.</h2>
-          </div>
-          <SourceLinks
-            links={[
-              {
-                href: content.officialSources.provider,
-                label: 'Provider page',
-              },
-              {
-                href: content.officialSources.goldenOffice,
-                label: 'Golden office page',
-              },
-              {
-                href: content.officialSources.patientForms,
-                label: 'Patient forms',
-              },
-              {
-                href: content.officialSources.insurance,
-                label: 'Insurance',
-              },
-            ]}
-          />
-        </div>
-
-        <div className="mt-8 space-y-2">
+function Questions() {
+  return (
+    <section
+      aria-labelledby="faq-heading"
+      className="border-t border-rule bg-paper"
+    >
+      <div className="shell py-16 md:py-24">
+        <h2 id="faq-heading" className="section-heading">
+          Questions patients ask
+        </h2>
+        <div className="mt-8 max-w-3xl">
           {content.faq.map((item) => (
             <details
               key={item.question}
-              className="group rounded-[1rem] border border-[var(--line)] bg-[var(--surface)] px-5 py-1"
+              className="group border-t border-rule last:border-b"
               onToggle={(event) => {
                 if (event.currentTarget.open) {
                   trackEvent('faq_expand', { question: item.question })
                 }
               }}
             >
-              <summary className="flex cursor-pointer list-none items-center justify-between gap-4 py-4 text-left text-base font-semibold [&::-webkit-details-marker]:hidden">
-                <span>{item.question}</span>
-                <ChevronDown className="h-4 w-4 shrink-0 text-[var(--muted)] transition group-open:rotate-180" />
+              <summary className="flex min-h-14 cursor-pointer list-none items-center justify-between gap-4 py-4 text-lg font-semibold [&::-webkit-details-marker]:hidden">
+                {item.question}
+                <ChevronDown
+                  aria-hidden="true"
+                  className="h-5 w-5 shrink-0 text-ink-muted transition-transform group-open:rotate-180"
+                />
               </summary>
-              <p className="pb-4 text-sm leading-7 text-[var(--muted)]">
+              <p className="mt-0 mb-5 max-w-[65ch] leading-relaxed text-ink-muted">
                 {item.answer}
               </p>
             </details>
           ))}
         </div>
-      </RevealSection>
-
-      <RevealSection className="bg-[var(--accent)] py-14 text-white lg:py-20">
-        <div className="section-wrap grid gap-8 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-end">
-          <div>
-            <p className="eyebrow text-white/80">Book an appointment</p>
-            <h2 className="section-title text-white">Ready to book with Dr. Hood in Golden?</h2>
-            <p className="mt-5 max-w-2xl text-base leading-7 text-white/80">
-              Use the official appointment form or call the Golden office
-              directly.
-            </p>
-          </div>
-
-          <div className="flex flex-col gap-3 sm:flex-row">
-            <a
-              href={content.booking.href}
-              onClick={() => trackEvent('final_cta_book_click')}
-              className="inline-flex w-full items-center justify-center gap-2 whitespace-nowrap rounded-full bg-white px-5 py-3.5 text-base font-semibold text-[var(--ink)] transition hover:bg-white/90 sm:w-auto sm:px-6"
-            >
-              {content.booking.ctaLabel}
-            </a>
-            <a
-              href={content.office.phoneHref}
-              onClick={() => trackEvent('final_cta_call_click')}
-              className="inline-flex w-full items-center justify-center gap-2 whitespace-nowrap rounded-full border-2 border-white px-5 py-3.5 text-base font-semibold text-white transition hover:bg-white/20 sm:w-auto sm:px-6"
-            >
-              Call {content.office.phoneDisplay}
-            </a>
-          </div>
-        </div>
-      </RevealSection>
-
-      <RevealSection as="footer" className="border-t border-[var(--line)] bg-[var(--ink)]">
-        <div className="section-wrap flex flex-col gap-4 py-12 text-sm text-white/70 lg:flex-row lg:items-end lg:justify-between">
-          <div>
-            <p className="font-semibold text-white">{content.identity.name}</p>
-            <p>{content.identity.title}</p>
-            <p>{content.office.name}</p>
-            <p>
-              {content.office.address1}, {content.office.city}, {content.office.state}{' '}
-              {content.office.zip}
-            </p>
-            <p>{content.office.phoneDisplay}</p>
-            <p>Last reviewed: {content.meta.lastReviewed}</p>
-          </div>
-
-          <div className="flex flex-wrap gap-5">
-            <a href={content.officialSources.provider} className="font-medium text-white/80 transition hover:text-white">
-              Official provider profile
-            </a>
-            <a href={content.officialSources.goldenOffice} className="font-medium text-white/80 transition hover:text-white">
-              Golden office page
-            </a>
-            <a href={content.officialSources.appointment} className="font-medium text-white/80 transition hover:text-white">
-              Appointment page
-            </a>
-          </div>
-        </div>
-      </RevealSection>
-
-      <div className="fixed inset-x-0 bottom-0 z-50 rounded-t-2xl border-t border-[var(--line)] bg-[var(--paper-strong)] px-4 py-3.5 shadow-[0_-4px_20px_rgba(31,43,47,0.08)] backdrop-blur sm:hidden">
-        <div className="mx-auto flex max-w-lg gap-3">
-          <a
-            href={content.booking.href}
-            onClick={() => trackEvent('sticky_book_click')}
-            className="inline-flex flex-1 items-center justify-center gap-2 whitespace-nowrap rounded-full bg-[var(--accent)] px-4 py-3 text-sm font-semibold text-white transition hover:bg-[var(--accent-strong)]"
-          >
-            <CalendarDays className="h-4 w-4" />
-            Book Appointment
-          </a>
-          <a
-            href={content.office.phoneHref}
-            onClick={() => trackEvent('sticky_call_click')}
-            className="inline-flex flex-1 items-center justify-center gap-2 whitespace-nowrap rounded-full border border-[var(--line-strong)] bg-white px-4 py-3 text-sm font-semibold text-[var(--ink)] transition hover:border-[var(--accent-strong)] hover:text-[var(--accent-strong)]"
-          >
-            <Phone className="h-4 w-4" />
-            Call
-          </a>
-        </div>
       </div>
-    </main>
+    </section>
   )
 }
 
-function SourceLinks({
-  links,
-  className = '',
-}: {
-  links: SourceLinkItem[]
-  className?: string
-}) {
+function Closing() {
+  return (
+    <section aria-labelledby="closing-heading" className="bg-stone">
+      <div className="shell grid gap-8 py-16 md:grid-cols-[minmax(0,0.8fr)_minmax(0,1.2fr)] md:items-center md:gap-14 md:py-24">
+        <div>
+          <h2 id="closing-heading" className="section-heading">
+            Ready to see Dr. Hood?
+          </h2>
+          <p className="mt-4 mb-0 text-lg leading-relaxed text-ink-muted">
+            Pick an open time online, ask the office to call you, or call them
+            yourself. U.S. Dermatology Partners confirms every appointment.
+          </p>
+        </div>
+        <AppointmentCard
+          headingId="closing-appointment-heading"
+          placement="closing"
+        />
+      </div>
+    </section>
+  )
+}
+
+function MobileActionBar() {
+  const [hidden, setHidden] = useState(false)
+
+  useEffect(() => {
+    const controls = document.querySelectorAll('[data-booking-control]')
+    const visible = new Set<Element>()
+    const observer = new IntersectionObserver(
+      (entries) => {
+        for (const entry of entries) {
+          if (entry.intersectionRatio >= 0.99) visible.add(entry.target)
+          else visible.delete(entry.target)
+        }
+        setHidden(visible.size > 0)
+      },
+      { threshold: [0, 0.99] },
+    )
+    controls.forEach((control) => observer.observe(control))
+    return () => observer.disconnect()
+  }, [])
+
   return (
     <div
-      className={`flex flex-wrap items-center gap-2 text-[0.65rem] text-[var(--muted)] sm:text-xs ${className}`.trim()}
+      className={`fixed inset-x-0 bottom-0 z-50 border-t border-rule bg-card/95 px-4 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] shadow-[0_-8px_24px_-16px_rgb(28_37_41/0.35)] backdrop-blur-md transition-transform duration-300 ease-out motion-reduce:transition-none md:hidden ${
+        hidden ? 'translate-y-full' : 'translate-y-0'
+      }`}
+      aria-hidden={hidden}
+      inert={hidden}
     >
-      <span className="font-semibold uppercase tracking-[0.18em] text-[var(--muted)]">
-        Official source
-      </span>
-      {links.map((link) => (
+      <div className="mx-auto flex max-w-lg gap-3">
         <a
-          key={`${link.label}-${link.href}`}
-          href={link.href}
-          onClick={link.onClick}
-          className="inline-flex items-center gap-1 rounded-full border border-[var(--line)] bg-[var(--surface)] px-2 py-0.5 font-medium transition hover:text-[var(--accent-strong)] sm:px-2.5 sm:py-1"
+          href={content.booking.href}
+          onClick={() => trackEvent('sticky_schedule_click')}
+          className="btn-primary flex-[1.6] px-4 whitespace-nowrap"
         >
-          {link.label}
-          <ExternalLink className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
+          Book online
         </a>
-      ))}
+        <a
+          href={content.office.phoneHref}
+          onClick={() => trackEvent('sticky_call_click')}
+          className="btn-secondary flex-1 px-4"
+        >
+          <Phone aria-hidden="true" className="h-4 w-4" />
+          Call
+        </a>
+      </div>
     </div>
   )
 }

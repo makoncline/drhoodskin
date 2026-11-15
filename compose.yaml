@@ -6,6 +6,9 @@ services:
     restart: unless-stopped
     environment:
       PORT: 3000
+      LOG_DIR: /app/data/logs
+    volumes:
+      - ./data:/app/data
     networks:
       edge:
         aliases:
