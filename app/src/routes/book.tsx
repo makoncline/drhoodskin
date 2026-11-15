@@ -61,6 +61,7 @@ export const Route = createFileRoute('/book')({
     }
   },
   loader: () => getSchedulerData({ data: {} }),
+  onEnter: () => trackEvent('book_page_view'),
   shouldReload: false,
   pendingComponent: LoadingState,
   head: () => {
@@ -189,6 +190,10 @@ function SchedulerConcept() {
   const navigate = useNavigate({ from: Route.fullPath })
   const router = useRouter()
   const [refreshing, setRefreshing] = useState(false)
+  const [refreshFailures, setRefreshFailures] = useState({
+    office: false,
+    exam: false,
+  })
   const visit: Visit = search.visit ?? 'office'
   const filter = useMemo<PageFilter>(
     () => ({ ...parseFilter(search), avoid: normalizeAvoid(search.avoid) }),
@@ -219,8 +224,14 @@ function SchedulerConcept() {
   const refresh = async () => {
     setRefreshing(true)
     try {
-      await getSchedulerData({ data: { fresh: true } })
+      const result = await getSchedulerData({ data: { fresh: true } })
       await router.invalidate()
+      setRefreshFailures({
+        office: !result.office || result.office.refreshFailed === true,
+        exam: !result.exam || result.exam.refreshFailed === true,
+      })
+    } catch {
+      setRefreshFailures({ office: true, exam: true })
     } finally {
       setRefreshing(false)
     }
@@ -349,6 +360,9 @@ function SchedulerConcept() {
         {data !== null ? (
           <CheckedAt
             checkedAt={data.checkedAt}
+            refreshFailed={
+              refreshFailures[visit] || data.refreshFailed === true
+            }
             refreshing={refreshing}
             onRefresh={refresh}
           />
@@ -1147,15 +1161,22 @@ function CallToSchedule({ visit }: { visit: Visit }) {
 
 function CheckedAt({
   checkedAt,
+  refreshFailed,
   refreshing,
   onRefresh,
 }: {
   checkedAt: number
+  refreshFailed: boolean
   refreshing: boolean
   onRefresh: () => void
 }) {
   return (
     <div className="mt-6 text-sm text-ink-muted">
+      {refreshFailed ? (
+        <p className="mt-0 mb-1" role="status">
+          Couldn’t refresh. Showing the last checked times.
+        </p>
+      ) : null}
       <p className="m-0 flex flex-wrap items-center gap-x-2">
         Times checked{' '}
         {new Date(checkedAt).toLocaleTimeString('en-US', {

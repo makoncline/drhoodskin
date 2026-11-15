@@ -393,7 +393,7 @@ Facts on this site come from official U.S. Dermatology Partners pages and are re
 - [Choose an open time with Dr. Hood](${content.booking.schedulerHref}): books a specific time on the U.S. Dermatology Partners scheduling site.
 - [Request a callback](${content.booking.callbackHref}): sends a request; the office calls back. Does not book a time.
 - [Find times that fit](${absoluteUrl(agentPaths.appointments)}?days=mon,fri&times=early-morning,late-afternoon&avoid=09:00-17:00): live openings grouped by date, filtered by weekday (\`mon\`–\`sun\`), time band (\`early-morning\`, \`late-morning\`, \`early-afternoon\`, \`late-afternoon\`), and busy ranges in Mountain Time (\`avoid=09:00-17:00\`, comma-separated). Also the MCP tool \`find_appointments\`, with \`avoid\` as an array of strings. Busy ranges exclude starts in [from, to); malformed ranges are ignored. \`limit\` counts days (default 5, maximum 20). Returns booking links, total matching times and days, the unfiltered soonest opening, observed hours from loaded openings, and the other visit type's unfiltered availability.
-- A full-body skin exam needs a full-body slot (\`visit=full-body-exam\`). Never offer an office-visit time for a full-body exam. An office visit (\`visit=office\`, the default) is for a specific concern. Confirm the visit type and time with the patient. Give booking links to the patient; do not open them.
+- A full-body skin exam needs a full-body slot (\`visit=full-body-exam\` or its alias \`visit=exam\`). Missing or empty \`visit\` means office; other values are rejected. Never offer an office-visit time for a full-body exam. An office visit (\`visit=office\`, the default) is for a specific concern. Confirm the visit type and time with the patient. Give booking links to the patient; do not open them.
 - Phone: ${content.office.phoneDisplay} (${content.office.address1}, ${content.office.city}, ${content.office.state} ${content.office.zip})
 
 ## Facts
@@ -456,7 +456,7 @@ Use this guide when an agent needs trustworthy, read-only facts about Dr. Channi
 ## Booking guardrails
 
 - Use the official scheduling URL, which books a specific time: ${content.booking.schedulerHref}
-- A full-body skin exam needs a full-body slot (\`visit=full-body-exam\`). Never offer an office-visit time for a full-body exam. An office visit (\`visit=office\`, the default) is for a specific concern.
+- A full-body skin exam needs a full-body slot (\`visit=full-body-exam\` or its alias \`visit=exam\`). Missing or empty \`visit\` means office; other values are rejected. Never offer an office-visit time for a full-body exam. An office visit (\`visit=office\`, the default) is for a specific concern.
 - Confirm the visit type and time with the patient. Give booking links to the patient; do not open them. The patient completes booking on the official scheduling page.
 - The other visit type's availability is unfiltered. Do not assume that it fits the patient's schedule or visit needs. Observed hours describe loaded openings, not guaranteed working hours.
 - The official callback request form does not book a time: ${content.booking.callbackHref}
@@ -747,10 +747,10 @@ export const openApiDocument = {
             name: 'visit',
             in: 'query',
             description:
-              'Office visit for a specific concern, or full-body skin exam requiring a full-body slot. Never substitute an office-visit time for a full-body exam.',
+              'Office visit for a specific concern, or full-body skin exam requiring a full-body slot. exam is an alias for full-body-exam. Missing or empty means office. Other values return 400. Never substitute an office-visit time for a full-body exam.',
             schema: {
               type: 'string',
-              enum: ['office', 'full-body-exam'],
+              enum: ['office', 'full-body-exam', 'exam'],
               default: 'office',
             },
           },
@@ -758,21 +758,21 @@ export const openApiDocument = {
             name: 'days',
             in: 'query',
             description:
-              'Comma-separated weekdays: mon,tue,wed,thu,fri,sat,sun. Empty means any.',
+              'Weekdays: mon,tue,wed,thu,fri,sat,sun. Use comma-separated values or repeated days keys. Empty means any.',
             schema: { type: 'string' },
           },
           {
             name: 'times',
             in: 'query',
             description:
-              'Comma-separated bands: early-morning (before 10 AM), late-morning (10 AM to noon), early-afternoon (noon to 2 PM), late-afternoon (after 2 PM). Empty means any.',
+              'Time bands: early-morning (before 10 AM), late-morning (10 AM to noon), early-afternoon (noon to 2 PM), late-afternoon (after 2 PM). Use comma-separated values or repeated times keys. Empty means any.',
             schema: { type: 'string' },
           },
           {
             name: 'avoid',
             in: 'query',
             description:
-              'Comma-separated busy ranges in Mountain Time, in 24-hour HH:MM-HH:MM form, such as 09:00-17:00. Excludes starts in [from, to). Malformed, empty, and reversed ranges are ignored.',
+              'Busy ranges in Mountain Time, in 24-hour HH:MM-HH:MM form, such as 09:00-17:00. Use comma-separated values or repeated avoid keys. Excludes starts in [from, to). Malformed, empty, and reversed ranges are ignored.',
             schema: { type: 'string' },
           },
           {
@@ -787,6 +787,9 @@ export const openApiDocument = {
           '200': {
             description:
               'days contains matching dates in date order: { date, weekday, waitDays, earlierThanUsual, times: [{ time, start, bookingUrl }] }. limit counts days. totalMatches counts all matching times; totalDays counts all matching dates before the limit. soonest is the selected visit type’s unfiltered earliest opening, or null. hours is derived from all loaded openings for that visit: { firstTime, lastTime, weekdays }, or null if none are loaded; these are observed openings, not guaranteed working hours. otherVisit contains { visit, status, soonest } for the other visit type, without filters. Also includes status, checkedAt, timeZone, filter, call options, and booking instructions. No flat matches field.',
+          },
+          '400': {
+            description: 'Invalid visit. Use office, full-body-exam, or exam.',
           },
           '502': { description: 'The official scheduler could not be reached' },
         },

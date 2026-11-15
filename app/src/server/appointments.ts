@@ -39,6 +39,26 @@ type AppointmentDay = {
   times: { time: string; start: string; bookingUrl: string }[]
 }
 
+export class InvalidVisitError extends Error {
+  constructor() {
+    super('Invalid visit. Use office, full-body-exam, or exam.')
+  }
+}
+
+function parseVisit(value: unknown): CachedVisit {
+  switch (value) {
+    case undefined:
+    case '':
+    case 'office':
+      return 'office'
+    case 'full-body-exam':
+    case 'exam':
+      return 'full-body-exam'
+    default:
+      throw new InvalidVisitError()
+  }
+}
+
 function visitName(visit: CachedVisit) {
   return visit === 'office' ? 'office visit' : 'full-body skin exam'
 }
@@ -57,8 +77,7 @@ function bookPageUrl(
 }
 
 export async function findAppointments(query: AppointmentQuery) {
-  const visit: CachedVisit =
-    query.visit === 'full-body-exam' ? 'full-body-exam' : 'office'
+  const visit = parseVisit(query.visit)
   const otherVisitType: CachedVisit =
     visit === 'office' ? 'full-body-exam' : 'office'
   const filter = parseFilter(query)
@@ -210,7 +229,13 @@ export async function findAppointmentsTool(args: AppointmentQuery | undefined) {
       content: [{ type: 'text' as const, text: text.join('\n') }],
       structuredContent: result,
     }
-  } catch {
+  } catch (error) {
+    if (error instanceof InvalidVisitError) {
+      return {
+        content: [{ type: 'text' as const, text: error.message }],
+        isError: true,
+      }
+    }
     return {
       content: [
         {

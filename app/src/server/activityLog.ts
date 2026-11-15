@@ -1,5 +1,6 @@
 import { createHash, randomBytes } from 'node:crypto'
 import { appendFileSync, mkdirSync } from 'node:fs'
+import { readdir, unlink } from 'node:fs/promises'
 import { join } from 'node:path'
 
 export type AgentClass = 'human' | 'ai-agent' | 'search-bot' | 'other-bot'
@@ -62,6 +63,17 @@ export function classifyAgent(userAgent: string): {
   return { a: 'human' }
 }
 
+const dayFormatter = new Intl.DateTimeFormat('en-CA', {
+  timeZone: 'America/Denver',
+  year: 'numeric',
+  month: '2-digit',
+  day: '2-digit',
+})
+
+export function activityDay(date: Date) {
+  return dayFormatter.format(date)
+}
+
 let salt = { day: '', value: '' }
 
 function dailySalt(day: string) {
@@ -99,10 +111,31 @@ export function requestContext(headers: Headers, siteHost: string) {
     ...agent,
     v:
       agent.a === 'human'
-        ? visitorId(ip, userAgent, now.toISOString().slice(0, 10))
+        ? visitorId(ip, userAgent, activityDay(now))
         : undefined,
     c: headers.get('cf-ipcountry') ?? undefined,
     r: referrerHost,
+  }
+}
+
+const cleanupDays = new Map<string, string>()
+
+async function removeExpiredActivity(logDir: string, today: string) {
+  const cutoff = new Date(`${today}T00:00:00Z`)
+  cutoff.setUTCDate(cutoff.getUTCDate() - 180)
+  const oldestDay = cutoff.toISOString().slice(0, 10)
+
+  for (const file of await readdir(logDir, { withFileTypes: true })) {
+    const match = /^activity-(\d{4}-\d{2}-\d{2})\.jsonl$/.exec(file.name)
+    if (!file.isFile() || !match || match[1] >= oldestDay) continue
+    const date = new Date(`${match[1]}T00:00:00Z`)
+    if (
+      !Number.isFinite(date.getTime()) ||
+      date.toISOString().slice(0, 10) !== match[1]
+    ) {
+      continue
+    }
+    await unlink(join(logDir, file.name))
   }
 }
 
@@ -119,6 +152,12 @@ export function writeActivity(
       join(logDir, `activity-${entry.t.slice(0, 10)}.jsonl`),
       `${line}\n`,
     )
+    const today = new Date().toISOString().slice(0, 10)
+    if (cleanupDays.get(logDir) === today) return
+    cleanupDays.set(logDir, today)
+    void removeExpiredActivity(logDir, today).catch((error) => {
+      console.error('Activity log cleanup failed', error)
+    })
   } catch (error) {
     console.error('Activity log write failed', error)
   }

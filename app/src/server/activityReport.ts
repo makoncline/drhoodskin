@@ -1,5 +1,6 @@
 import { existsSync, readFileSync, readdirSync } from 'node:fs'
 import { join } from 'node:path'
+import { activityDay } from './activityLog.ts'
 import type { ActivityEntry } from './activityLog.ts'
 
 export const bookingEvents = {
@@ -44,12 +45,14 @@ export function summarizeActivity(entries: ActivityEntry[]) {
     (entry) => entry.k === 'request' && entry.p === '/',
   )
   const bookPageViews = humans.filter(
-    (entry) => entry.k === 'request' && entry.p === '/book',
+    (entry) =>
+      (entry.k === 'request' && entry.p === '/book') ||
+      (entry.k === 'event' && entry.e === 'book_page_view'),
   )
   const visitorsByDay = new Map<string, Set<string>>()
-  for (const view of pageViews) {
+  for (const view of [...pageViews, ...bookPageViews]) {
     if (!view.v) continue
-    const day = view.t.slice(0, 10)
+    const day = activityDay(new Date(view.t))
     visitorsByDay.set(day, (visitorsByDay.get(day) ?? new Set()).add(view.v))
   }
   const visitorDays = [...visitorsByDay.values()].reduce(
@@ -72,7 +75,7 @@ export function summarizeActivity(entries: ActivityEntry[]) {
             pattern.test(entry.e ?? ''),
           ),
       )
-      .map((entry) => `${entry.t.slice(0, 10)}|${entry.v}`),
+      .map((entry) => `${activityDay(new Date(entry.t))}|${entry.v}`),
   )
   const agents = entries.filter((entry) => entry.a === 'ai-agent')
 
@@ -116,7 +119,7 @@ export function formatActivityReport(
     `# drhoodskin.com activity, last ${days} days`,
     '',
     `Page views (people): ${summary.pageViews} home, ${summary.bookPageViews} booking page`,
-    `Visitors (unique per day, summed): ${summary.visitorDays}`,
+    `Visitors (unique per Denver day, summed): ${summary.visitorDays}`,
     `Booking actions: ${summary.booking.schedule} official scheduler visits, ${summary.booking.callback} callback requests, ${summary.booking.call} calls`,
     `Visitors who took a booking action: ${summary.bookingVisitorDays} (${(summary.bookingRate * 100).toFixed(1)}%)`,
     '',

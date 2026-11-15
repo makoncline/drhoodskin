@@ -7,6 +7,7 @@ import { readActivity, summarizeActivity } from './activityReport.ts'
 
 const dirs: string[] = []
 afterEach(() => {
+  vi.useRealTimers()
   vi.restoreAllMocks()
   for (const dir of dirs.splice(0))
     rmSync(dir, { recursive: true, force: true })
@@ -65,6 +66,107 @@ describe('activity log and report', () => {
     expect(summary.bookingVisitorDays).toBe(2)
     expect(summary.bookingRate).toBeCloseTo(2 / 3)
     expect(summary.clicksByEvent).toContainEqual(['hero_book_page_click', 1])
+  })
+
+  it('includes direct booking-page visitors in the booking rate', () => {
+    vi.spyOn(console, 'log').mockImplementation(() => undefined)
+    const dir = mkdtempSync(join(tmpdir(), 'activity-'))
+    dirs.push(dir)
+    for (const [index, path] of ['/', '/book'].entries()) {
+      const context = requestContext(
+        headers('Mozilla/5.0 Chrome/130.0', `198.51.100.${index + 1}`),
+        'drhoodskin.com',
+      )
+      writeActivity({ ...context, k: 'request', p: path }, dir)
+      writeActivity(
+        { ...context, k: 'event', p: '/', e: 'book_schedule_click' },
+        dir,
+      )
+    }
+
+    const summary = summarizeActivity(readActivity(dir, 1))
+    expect(summary.pageViews).toBe(1)
+    expect(summary.bookPageViews).toBe(1)
+    expect(summary.visitorDays).toBe(2)
+    expect(summary.bookingVisitorDays).toBe(2)
+    expect(summary.bookingRate).toBe(1)
+  })
+
+  it('counts client booking-page arrivals and full loads once each', () => {
+    vi.spyOn(console, 'log').mockImplementation(() => undefined)
+    const dir = mkdtempSync(join(tmpdir(), 'activity-'))
+    dirs.push(dir)
+    const navigation = requestContext(
+      headers('Mozilla/5.0 Chrome/130.0', '198.51.100.1'),
+      'drhoodskin.com',
+    )
+    writeActivity({ ...navigation, k: 'request', p: '/' }, dir)
+    for (const event of ['hero_book_page_click', 'book_page_view']) {
+      writeActivity({ ...navigation, k: 'event', p: '/', e: event }, dir)
+    }
+    const fullLoad = requestContext(
+      headers('Mozilla/5.0 Chrome/130.0', '198.51.100.2'),
+      'drhoodskin.com',
+    )
+    writeActivity({ ...fullLoad, k: 'request', p: '/book' }, dir)
+
+    const summary = summarizeActivity(readActivity(dir, 1))
+    expect(summary.bookPageViews).toBe(2)
+    expect(summary.pageViews).toBe(1)
+    expect(summary.visitorDays).toBe(2)
+    expect(summary.booking).toEqual({ schedule: 0, callback: 0, call: 0 })
+    expect(summary.bookingVisitorDays).toBe(0)
+    expect(summary.bookingRate).toBe(0)
+  })
+
+  it.each([
+    ['2026-11-21', '2026-11-22T07:00:00Z'],
+    ['2026-07-21', '2026-07-22T06:00:00Z'],
+  ])('keeps the Denver evening on %s in one visitor-day', (day, midnight) => {
+    vi.spyOn(console, 'log').mockImplementation(() => undefined)
+    vi.useFakeTimers()
+    const dir = mkdtempSync(join(tmpdir(), 'activity-'))
+    dirs.push(dir)
+    const evening = new Date(`${day}T23:30:00Z`)
+    const later = new Date(evening.getTime() + 3.5 * 60 * 60_000)
+    for (const time of [evening, later]) {
+      vi.setSystemTime(time)
+      const context = requestContext(
+        headers('Mozilla/5.0 Chrome/130.0'),
+        'drhoodskin.com',
+      )
+      writeActivity({ ...context, k: 'request', p: '/book' }, dir)
+      writeActivity(
+        { ...context, k: 'event', p: '/', e: 'book_schedule_click' },
+        dir,
+      )
+    }
+
+    const entries = readActivity(dir, 1)
+    expect(entries[0].t).toBe(evening.toISOString())
+    expect(entries[2].t).toBe(later.toISOString())
+    expect(entries[0].v).toBe(entries[2].v)
+    const summary = summarizeActivity(entries)
+    expect(summary.visitorDays).toBe(1)
+    expect(summary.visitorsByDay).toEqual([[day, 1]])
+    expect(summary.bookingVisitorDays).toBe(1)
+    expect(summary.bookingRate).toBe(1)
+
+    vi.setSystemTime(new Date(midnight))
+    writeActivity(
+      {
+        ...requestContext(
+          headers('Mozilla/5.0 Chrome/130.0'),
+          'drhoodskin.com',
+        ),
+        k: 'request',
+        p: '/book',
+      },
+      dir,
+    )
+    const nextDayEntries = readActivity(dir, 1)
+    expect(nextDayEntries.at(-1)?.v).not.toBe(entries[0].v)
+    expect(summarizeActivity(nextDayEntries).visitorDays).toBe(2)
   })
 
   it('classifies people, AI agents, search bots, and scripts', () => {
