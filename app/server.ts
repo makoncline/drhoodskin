@@ -137,6 +137,7 @@ function mcpSuccess(id: JsonRpcRequest['id'], result: unknown) {
   }
 }
 
+// A 404 from this handler falls through to the page renderer, which answers non-HTML requests with 406.
 function mcpError(
   id: JsonRpcRequest['id'],
   code: number,
@@ -241,7 +242,7 @@ async function handleMcpRequest(
     }
 
     if (!knownMcpTools.has(toolName)) {
-      return mcpError(rpcRequest.id, -32601, `Unknown tool: ${toolName}`, 404)
+      return mcpError(rpcRequest.id, -32601, `Unknown tool: ${toolName}`)
     }
 
     writeActivity({
@@ -269,7 +270,7 @@ async function handleMcpRequest(
     } catch (error) {
       const message =
         error instanceof Error ? error.message : 'Unknown MCP tool error'
-      return mcpError(rpcRequest.id, -32601, message, 404)
+      return mcpError(rpcRequest.id, -32601, message)
     }
   }
 
@@ -282,7 +283,7 @@ async function handleMcpRequest(
     )
   }
 
-  return mcpError(rpcRequest.id, -32601, 'Method not found', 404)
+  return mcpError(rpcRequest.id, -32601, 'Method not found')
 }
 
 const loggedPaths = new Set<string>([

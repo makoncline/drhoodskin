@@ -681,7 +681,7 @@ describe('POST /mcp', () => {
 
   it('returns a JSON-RPC error for an unknown tool', async () => {
     const response = await rpc('tools/call', { name: 'unknown_tool' }, 4)
-    expect(response.status).toBe(404)
+    expect(response.status).toBe(400)
     expect(JSON.parse(await response.text())).toEqual({
       jsonrpc: '2.0',
       id: 4,
@@ -697,7 +697,7 @@ describe('POST /mcp', () => {
     ).toBe(200)
     const unknownTool = `unknown_tool_${'x'.repeat(4096)}`
     const response = await rpc('tools/call', { name: unknownTool }, 4)
-    expect(response.status).toBe(404)
+    expect(response.status).toBe(400)
     expect(JSON.parse(await response.text())).toEqual({
       jsonrpc: '2.0',
       id: 4,
