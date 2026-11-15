@@ -11,7 +11,7 @@ The app writes one JSON line per tracked activity. No cookies, no IP addresses, 
 
 POST request bodies are limited to 1 KB for `/api/events` and 64 KB for `/mcp`. Larger bodies return HTTP 413, even when `Content-Length` is absent or too small. MCP tool calls are logged only for known tool names.
 
-Docker stdout logs use the `json-file` driver with a 10 MB limit per file and at most three files. This limit does not cover the daily JSONL files in `LOG_DIR`.
+Docker stdout logs use the `json-file` driver with a 10 MB limit per file and at most three files. Daily JSONL files in `LOG_DIR` keep the current UTC day and the previous 180 days. The first successful write after startup or on a new UTC day starts background cleanup. Cleanup uses the date in each file name, not its modification time, and deletes only regular files named exactly `activity-YYYY-MM-DD.jsonl` directly in `LOG_DIR`. It does not follow symlinks or enter subdirectories. Cleanup errors go to stderr and do not stop activity writes.
 
 ## What a line contains
 
