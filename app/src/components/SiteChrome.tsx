@@ -36,7 +36,7 @@ export function SiteHeader({ showBooking = true }: { showBooking?: boolean }) {
           {showBooking ? (
             <Link
               to="/book"
-              onClick={() => trackEvent('header_schedule_click')}
+              onClick={() => trackEvent('header_book_page_click')}
               className="btn-primary hidden min-h-11 px-4 py-2 text-[0.95rem] md:inline-flex"
             >
               Book an appointment

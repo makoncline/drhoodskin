@@ -727,7 +727,7 @@ function MobileActionBar() {
       <div className="mx-auto flex max-w-lg gap-3">
         <Link
           to="/book"
-          onClick={() => trackEvent('sticky_schedule_click')}
+          onClick={() => trackEvent('sticky_book_page_click')}
           className="btn-primary flex-[1.6] px-4 whitespace-nowrap"
         >
           Book online

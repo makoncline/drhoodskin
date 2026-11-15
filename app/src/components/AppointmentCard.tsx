@@ -31,7 +31,7 @@ export function AppointmentCard({
       <div className="mt-3 grid gap-2 sm:mt-4 sm:grid-cols-[auto_minmax(0,1fr)] sm:items-center sm:gap-5">
         <Link
           to="/book"
-          onClick={() => trackEvent(`${placement}_schedule_click`)}
+          onClick={() => trackEvent(`${placement}_book_page_click`)}
           data-booking-control
           className="btn-primary w-full px-6 sm:w-auto"
         >

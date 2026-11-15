@@ -24,7 +24,7 @@ The app writes one JSON line per tracked activity. No cookies, no IP addresses, 
 | `tool` | MCP tool name |
 | `via` | `webmcp` when a browser agent called the tool through WebMCP on the homepage |
 
-Logged requests: `/`, the booking page `/book`, and the agent files (`/llms.txt`, `/.well-known/*`, `/api/*`, `/mcp`, `/openapi.json`, `/sitemap.xml`). Assets and scanner probes are not logged. Click events are accepted only from people and only for known names. Homepage booking buttons (`hero_`, `closing_`, `header_`, `sticky_schedule_click`) open `/book`; `*_scheduler_click` is the fallback link to the USDP scheduler. Booking page events: `book_schedule_click`, `book_early_schedule_click` (a time flagged earlier than usual), `book_call_click`, `book_callback_click`, `book_filter_change`, `book_visit_switch`, `book_switch_note_click`.
+Logged requests: `/`, the booking page `/book`, and the agent files (`/llms.txt`, `/.well-known/*`, `/api/*`, `/mcp`, `/openapi.json`, `/sitemap.xml`). Assets and scanner probes are not logged. Click events are accepted only from people and only for known names. Homepage booking buttons (`hero_book_page_click`, `closing_book_page_click`, `header_book_page_click`, `sticky_book_page_click`) open `/book` and do not count as official scheduler visits. The earlier homepage `*_schedule_click` events and the current fallback `*_scheduler_click` events count as official scheduler visits. Booking page events: `book_schedule_click`, `book_early_schedule_click` (a time flagged earlier than usual), `book_call_click`, `book_callback_click`, `book_filter_change`, `book_visit_switch`, `book_switch_note_click`.
 
 ## Report
 

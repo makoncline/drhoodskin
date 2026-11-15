@@ -3,7 +3,7 @@ import { join } from 'node:path'
 import type { ActivityEntry } from './activityLog.ts'
 
 export const bookingEvents = {
-  schedule: /^book_(?:early_)?schedule_click$|_scheduler_click$/,
+  schedule: /_(?:schedule|scheduler)_click$/,
   callback: /_callback_click$/,
   call: /_call_click$/,
 } as const
