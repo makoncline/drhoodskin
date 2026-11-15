@@ -5,7 +5,7 @@ The Worker stores tracked activity in D1. It uses the same fields and summary ru
 ## Storage
 
 - Worker: the `activity` table in the `DB` D1 binding.
-- Local development: persistent Miniflare D1 under `.local/fixture-d1`.
+- Local development: persistent Miniflare D1 under `.local/wrangler-d1`.
 - Reports: a JSON array of exported activity rows, or the local D1 rows directly.
 - Mac availability history is separate: `app/.data/availability.sqlite`. Use `pnpm availability:report` for it.
 
@@ -61,7 +61,7 @@ The first two commands read local D1 without fetching NextPatient. The export co
 After the approved cutover, use the protected operations context to export only activity rows. Do not load credentials for development. One example, to run only after authorization:
 
 ```sh
-pnpm ops d1 execute DB --remote --command 'SELECT * FROM activity ORDER BY t, id' --json > activity-d1-result.json
+pnpm exec wrangler d1 execute drhoodskin --remote --command 'SELECT * FROM activity ORDER BY t, id' --json > activity-d1-result.json
 jq '.[0].results' activity-d1-result.json > activity-export.json
 pnpm activity:report --file=activity-export.json --days=7
 ```

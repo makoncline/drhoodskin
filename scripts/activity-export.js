@@ -3,7 +3,7 @@ import { pathToFileURL } from 'node:url'
 import { startRuntime } from './dev/runtime.js'
 import { refuseCredentials } from './no-credentials.js'
 
-export async function localActivityRows(persist = '.local/fixture-d1') {
+export async function localActivityRows(persist = '.local/wrangler-d1') {
   refuseCredentials()
   const runtime = await startRuntime({ persist })
   try {

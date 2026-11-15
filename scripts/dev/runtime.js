@@ -1,5 +1,6 @@
-import { readdirSync } from 'node:fs'
+import { readdirSync, readFileSync, mkdirSync, mkdtempSync, rmSync } from 'node:fs'
 import { Miniflare, convertV4MiniflareOptions } from 'miniflare'
+import { parse } from 'jsonc-parser'
 import { migrateLocalDatabase } from './migrate.js'
 import { nextPatientFixture } from './nextpatient.js'
 
@@ -11,6 +12,18 @@ export async function startRuntime({
   fixture = nextPatientFixture(),
 } = {}) {
   const logs = []
+  const config = parse(readFileSync('wrangler.jsonc', 'utf8'))
+  mkdirSync('.local', { recursive: true })
+  const storage = persist ?? mkdtempSync('.local/e2e-d1-')
+  const cleanup = () => {
+    if (!persist) rmSync(storage, { recursive: true, force: true })
+  }
+  try {
+    migrateLocalDatabase(storage)
+  } catch (error) {
+    cleanup()
+    throw error
+  }
   const options = {
     host: '127.0.0.1',
     port,
@@ -22,14 +35,14 @@ export async function startRuntime({
       .sort((a, b) => (a === 'index.js' ? -1 : b === 'index.js' ? 1 : 0))
       .map((file) => ({ type: 'ESModule', path: `dist/server/${file}` })),
     modulesRoot: 'dist/server',
-    compatibilityDate: '2026-11-03',
-    compatibilityFlags: ['nodejs_compat'],
+    compatibilityDate: config.compatibility_date,
+    compatibilityFlags: config.compatibility_flags,
     handleStructuredLogs: (log) => {
       logs.push(log)
       onLog(log)
     },
-    d1Databases: ['DB'],
-    ...(persist ? { resourcePersistencePath: persist } : {}),
+    d1Databases: { DB: config.d1_databases[0].database_id },
+    resourcePersistencePath: `${storage}/v3`,
     assets: {
       directory: './dist/client',
       binding: 'ASSETS',
@@ -41,7 +54,6 @@ export async function startRuntime({
   try {
     const origin = (await mf.ready).origin
     const db = await mf.getD1Database('DB')
-    await migrateLocalDatabase(db)
     const worker = await mf.getWorker()
     return {
       origin,
@@ -51,10 +63,14 @@ export async function startRuntime({
       dispatch: (path, init) => mf.dispatchFetch(origin + path, init),
       scheduled: (time = Date.now()) =>
         worker.scheduled({ scheduledTime: time, cron: '* * * * *' }),
-      close: () => mf.dispose(),
+      close: async () => {
+        await mf.dispose()
+        cleanup()
+      },
     }
   } catch (error) {
     await mf.dispose()
+    cleanup()
     throw error
   }
 }

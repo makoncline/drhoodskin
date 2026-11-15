@@ -22,7 +22,6 @@
     "scripts/*.ts",
     "vite.config.ts",
     "helpers.config.ts",
-    "alchemy.run.ts",
     "drizzle.config.ts",
     "db/schema.ts"
   ]

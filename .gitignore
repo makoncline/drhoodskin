@@ -5,9 +5,8 @@ data/
 .impeccable/review/
 node_modules/
 .local/
-.alchemy/
+.wrangler/
 .tanstack/
 dist/
 test-results/
 .env*
-!ops/.env.schema

@@ -2,7 +2,7 @@ import { watch, readFileSync, existsSync } from 'node:fs'
 import { spawn } from 'node:child_process'
 import { refuseCredentials } from '../no-credentials.js'
 refuseCredentials()
-const watched = ['src', 'config', 'db', 'public', 'scripts/dev', 'vite.config.ts', 'alchemy.run.ts']
+const watched = ['src', 'config', 'db', 'public', 'scripts/dev', 'vite.config.ts', 'wrangler.jsonc']
 let child,
   busy = false,
   again = false,

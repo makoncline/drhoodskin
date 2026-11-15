@@ -21,7 +21,7 @@ pnpm check
 pnpm launch:check
 ```
 
-`pnpm check` builds the Worker, tests the real Worker and D1, takes desktop and mobile screenshots, and checks types. Open the screenshots in `test-results/e2e`. The launch check reports missing public account setup. It does not load credentials or create resources.
+`pnpm check` builds the Worker, tests the real Worker and D1, takes desktop and mobile screenshots, and checks types. Open the screenshots in `test-results/e2e`. The launch check validates public Wrangler settings without reading secret values or creating resources. GitHub environment setup is checked separately.
 
 ## Layout
 
@@ -31,7 +31,8 @@ pnpm launch:check
 - `src/lib/nextPatientSchedule.ts`: shared Worker/Node scheduler parser.
 - `db/schema.ts`, `db/migrations`: Drizzle schema and reviewed D1 migrations.
 - `app/scripts`: the existing Mac poller and its report. Its local SQLite data remains in `app/.data`.
-- `config/app.json`: public infrastructure settings. Production fields are empty until account setup.
+- `wrangler.jsonc`: official Worker/D1 configuration, migrations, cron, and observability. No DNS routes or custom domain.
+- `config/app.json`: app identity and the intended workers.dev URL. Deployment waits for the coordinator's API-token setup and PR review.
 
 Read [DEVELOPMENT.md](DEVELOPMENT.md), [OPERATIONS.md](OPERATIONS.md), [PRODUCT.md](PRODUCT.md), and [the migration plan](docs/cloudflare-migration.md).
 

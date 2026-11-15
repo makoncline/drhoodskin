@@ -12,15 +12,15 @@ Setup installs dependencies and Chromium, then runs the check. Linux needs Chrom
 
 ## Runtime
 
-`pnpm dev` builds the production entry and runs it in Miniflare. It stores local D1 at `.local/fixture-d1`. Read `.local/ready.json` for the current URL, PID, and log path. Source changes rebuild and restart on the same port. Reload after the ready message. Stop with Ctrl-C. `pnpm dev:reset` removes local D1 and refuses while the app is running.
+`pnpm dev` builds the production entry and runs it in Miniflare. It stores local D1 at `.local/wrangler-d1`. Read `.local/ready.json` for the current URL, PID, and log path. Source changes rebuild and restart on the same port. Reload after the ready message. Stop with Ctrl-C. `pnpm dev:reset` removes local D1 and refuses while the app is running.
 
 The local runtime runs the real scheduled handler twice at startup, once for each visit type, then once per minute. NextPatient is replaced only at the outbound fetch boundary. Other outbound Worker traffic is blocked. The fixture accepts only the read-only `schedule.json` URL for this practice, provider, and two reasons. It never follows or opens booking links.
 
-No 1Password, Cloudflare, GitHub, or production credentials are needed. Dev and check scripts refuse deployment credentials in the environment. Local development does not run Alchemy deployment or use a remote database.
+No Cloudflare, GitHub, or production credentials are needed. Dev and check scripts refuse deployment credentials in the environment. Local development does not deploy or use a remote database. The build uses the official Cloudflare Vite plugin.
 
 ## Persistence and tests
 
-Edit `db/schema.ts`, run `pnpm db:generate`, inspect the SQL and snapshot, and commit the migration. Do not edit an applied migration. Both local setup and Alchemy use `@alchemy.run/sql/Migrations` and `__alchemy_migrations` bookkeeping. The initial migration adds the two due visit rows.
+Edit `db/schema.ts`, run `pnpm db:generate`, inspect the SQL and snapshot, and commit the migration. Do not edit an applied migration. Wrangler's `migrations_pattern` reads the generated `db/migrations/*/migration.sql` layout. Both E2E setup and production use the real `wrangler d1 migrations apply` command and its `d1_migrations` bookkeeping. E2E uses `--local` with an isolated persistence path, then starts Miniflare against that same D1 storage. The initial migration adds the two due visit rows.
 
 `pnpm check` runs:
 

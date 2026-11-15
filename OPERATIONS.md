@@ -1,64 +1,71 @@
 # Operations
 
-Phase 1 is local only. Do not deploy or load credentials as part of development. The existing Node container remains the production site until the migration cutover. Follow [the migration plan](docs/cloudflare-migration.md) for phases 2–6.
+Deploy to workers.dev first. Do not change DNS, attach a custom domain, change the tunnel, or stop the existing server until a separate cutover approval. Follow [the migration plan](docs/cloudflare-migration.md).
 
-The release method follows startup-template at `ad001e7` and the tested Alchemy/D1 release path in Home Cook Hotline. This site's NextPatient egress, cron CPU use, first deploy, and repeat deploy still need production checks.
+## Stack and resources
 
-## Account setup (phase 2)
+Use the official `@cloudflare/vite-plugin` with TanStack Start and Wrangler. `wrangler.jsonc` declares Worker `drhoodskin`, the D1 `DB` binding, one minute cron, `nodejs_compat`, observability, version metadata, and workers.dev. No routes or custom domains are configured. The build generates the deployment configuration in `dist/server/wrangler.json`.
 
-Makon must approve each account resource before it is created or changed.
+The approved D1 database is `drhoodskin`, ID `788fd598-812f-4933-8334-a56d9d82d385`, in account `862f016642ad509483b546d81fc48f63`. It was created with the logged-in local Wrangler CLI on 2026-11-15. Its remote schema has not yet been installed. The intended URL is `https://drhoodskin.daylilycatalog.workers.dev`; a URL in config does not mean the Worker is deployed.
 
-1. Keep Workers and D1 on Free, with paid overages disabled. Check the shared account's Cron Trigger quota. This site uses one trigger.
-2. Create D1 database `drhoodskin`. Set `production.accountId` and `production.databaseId` in `config/app.json`.
-3. Set `production.url` to the intended HTTPS workers.dev URL for phase 3. Alchemy does not attach a custom domain for a workers.dev URL. Set the public domain only for the approved phase-4 cutover.
-4. Create a drhoodskin Production 1Password Environment containing `CLOUDFLARE_API_TOKEN`. The token needs the D1, Worker, account, and Secrets Store access used by Alchemy's state backend. No application secrets, payment service, auth service, or email provider are used.
-5. Set the public 1Password Environment ID in `production.onePasswordEnvironmentId`. Store the bootstrap token only as `OP_TOKEN` in the GitHub `production` environment. Protect that environment for `main` only and set the Actions spending limit to $0.
-6. Run `pnpm launch:check`. Then run `node scripts/prepare-ops.js`. This writes the Varlock contract, not secret values. Do not load those values during local checks.
+The Workers dashboard confirmed the Free plan on 2026-11-15. Existing Workers used one of the five account Cron Triggers before this site's deployment. Do not enable a paid plan, paid overages, or additional services.
 
-Production fields are intentionally empty in phase 1. A failed launch check for URL, account, database, and 1Password is expected. No production resources are created by that command.
+## GitHub deployment setup
 
-## Protected release (phase 3 onward)
+Use the repository's `production` environment with a custom deployment branch policy allowing `main` only. It needs these environment secrets:
 
-Run `pnpm check` and inspect the four screenshots before an authorized release. Use the manual **Deploy production** workflow on `main`. It uses the pinned Playwright image, marks exactly `$GITHUB_WORKSPACE` as a Git safe directory, installs pinned pnpm dependencies, and tests before it loads `OP_TOKEN`.
+- `CLOUDFLARE_ACCOUNT_ID`: the public account ID above.
+- `CLOUDFLARE_API_TOKEN`: a token with Worker script and D1 write access for this account. The coordinator collects and installs it. Never read, print, or copy its value into source, logs, or chat.
 
-The protected deployment script:
+Check the Actions spending limit remains $0. Do not broaden the environment's deployment policy to get a branch deployment through.
 
-- Refuses to run without a Cloudflare token and `GITHUB_REF=refs/heads/main`.
-- Runs the launch check.
-- Verifies the configured D1 UUID and the exact name `drhoodskin` before adoption.
-- Saves a D1 Time Travel bookmark before migrations.
-- Bootstraps or adopts `drhoodskin-state`, then deploys only the Alchemy `prod` stage.
+The implementation agent must stop when the API token is needed. After the coordinator installs it, open the `cf-migration` PR, wait for CI, and stop before merging. The coordinator reviews and merges.
 
-Alchemy declares the D1 binding, SQL migrations, Worker, one-minute cron, version metadata, and observability. All declared app resources use adopt and retain policies. Workers.dev is enabled; version-preview URLs and hosted preview stages are disabled. Do not delete a database or state store to fix an adoption error.
+## Release
 
-After deployment, the job records the Git SHA, active deployment/version IDs, and migration names, then runs the live HTTP check. The check does not open `appt-book` links. A new D1 starts empty; the live check waits up to three minutes for the initial cron refreshes. If it still fails, inspect cron delivery and NextPatient egress before retrying. An empty scheduler cache is an error, not proof of no available appointments.
+The **Check and deploy** workflow follows the grunge deployment shape:
 
-Release artifacts contain `deployment.log`, `test-results/pre-deploy.json`, `release.json`, `live-check.json`, screenshots, and local check logs. They do not include `.alchemy`, `.local`, profile caches, or secret files. Run the protected job a second time against the same commit and confirm a repeat release before relying on this site's release path.
+1. Pull requests, pushes to `main`, and manual dispatch run `pnpm check` without deployment secrets.
+2. Only a non-PR run on `main` enters the protected `production` environment.
+3. The job builds with the official Cloudflare adapter.
+4. It runs `pnpm exec wrangler d1 migrations apply drhoodskin --remote`.
+5. It runs `pnpm exec wrangler deploy`.
+6. It runs `node scripts/live-check.js` against the workers.dev URL.
+
+Tests run in the pinned Playwright container. That job marks exactly `$GITHUB_WORKSPACE` as a Git safe directory. Deployment credentials are scoped to the migration and deploy steps, not the build or check steps. CI keeps the local check report, screenshots, logs, and live-check output as artifacts.
+
+The live check never opens an `appt-book` link. A new D1 starts empty; it waits up to three minutes for initial cron-fed availability. New cron configuration can take time to propagate. If the check still fails, inspect cron delivery and NextPatient egress before retrying. Do not add a request-path fetch to fill the cache.
+
+After the first successful deploy, inspect the pages and agent surfaces on workers.dev, verify both visit types refresh, measure CPU, and confirm an unattended repeat deploy. Do not change DNS until those checks pass and cutover is approved.
+
+## Schema and local runtime
+
+Edit `db/schema.ts`, run `pnpm db:generate`, and inspect the generated SQL and snapshot. Wrangler uses `migrations_dir: db/migrations` and `migrations_pattern: db/migrations/*/migration.sql` for the Drizzle directory layout. Do not edit an applied migration.
+
+Local development and E2E run Wrangler's real `d1 migrations apply --local` command before starting the built Worker in Miniflare. They share the same D1 ID and persistence layout. Local data is in `.local/wrangler-d1`; no remote database is used by checks. Earlier phase-1 fixture data is left in `.local/fixture-d1` and is not imported.
 
 ## Availability and Free limits
 
 Requests never contact NextPatient. `/book`, REST, and MCP read D1 and discard expired slots. A cached snapshot is usable for less than six hours. `/book` Refresh only re-reads D1.
 
-One cron invocation claims one due visit row atomically. Each successful visit is due after four minutes from 06:00 to 22:00 America/Denver, or thirty minutes overnight. A failed attempt keeps the previous snapshot and persists its error. Retry delay starts at one minute, doubles, and stops at fifteen minutes. Success clears the error and resets backoff. A three-minute claim lease prevents overlapping invocations from selecting the same visit while its fetches are in progress.
+One cron invocation claims one due visit row atomically. Success is due after four minutes from 06:00 to 22:00 America/Denver, or thirty minutes overnight. Failure keeps the previous snapshot and persists its error. Retry delay starts at one minute, doubles, and stops at fifteen minutes. Success resets backoff. A three-minute claim lease prevents overlapping invocations from selecting the same visit during its fetches.
 
-The parser scans the observed 92-day booking horizon. It fetches each three-day window at most once, uses no more than 31 external requests, and starts at most six at a time. It does not follow redirects. It fetches only read-only scheduler data, never booking links. Markup drift remains an error.
+The parser scans the observed 92-day horizon with at most 31 external reads and six concurrent fetches. It does not follow redirects or open booking links. Markup drift remains an error.
 
-Workers Free has a 10 ms CPU budget, 50 external subrequests, six concurrent outbound connections, 50 D1 queries per invocation, and shared daily request quotas. Local tests enforce the fetch-count and concurrency bounds, not production CPU time. Measure SSR and the largest cron pass in phase 3. The plan permits static prerendering of `/` only if measured SSR CPU regularly exceeds the limit. Do not enable a paid plan as a fix.
+Workers Free has a 10 ms CPU budget, 50 external subrequests, six concurrent outbound connections, 50 D1 queries per invocation, and shared daily request quotas. Local tests enforce fetch counts and concurrency, not production CPU. Measure SSR and the largest cron pass after deployment. The plan permits static prerendering of `/` only if measured SSR CPU regularly exceeds the limit. Do not enable paid features as a fix.
 
 ## Activity and diagnosis
 
-Activity is stored in D1 with the same report fields as the old JSONL rows. Each Denver day has one shared random visitor salt. A daily scheduled pass removes expired activity and earlier salts. See [activity logs and reports](docs/activity-logs.md).
+Activity is stored in D1 with the old report fields. Denver-day salts and daily retention state are shared across isolates. See [activity logs and reports](docs/activity-logs.md).
 
-Request diagnostics return `X-Correlation-ID` and log service, release, normalized route, method, status, and elapsed wall time. They do not log query strings, request bodies, IPs, or raw user agents. Native Cloudflare platform logs can contain request metadata; inspect exports before sharing. Observability uses Free quotas and finite retention. It is not the 180-day activity store.
+Responses return `X-Correlation-ID`. Request diagnostics log service, release, normalized route, method, status, and elapsed wall time, without query strings, raw bodies, IPs, or raw user agents. Native platform logs can contain request metadata; inspect exports before sharing. Free telemetry has finite retention and is not the activity store.
 
-Create an error monitor in the authorized account setup: count this Worker's error-level events each minute, alert at one or more, and limit repeats to once per hour. Verify notification delivery and the real log-to-alert path. Do not create a paid export or monitor.
+No account error monitor is created by this setup. Any later monitor needs separate resource approval and must use Free features.
 
-## Rollback and recovery
+## Recovery
 
-Until phase 5, restore the old tunnel hostname and start the installed server container to roll back the cutover. Do not rebuild on the small server as part of phase 1. Keep its data intact.
+Until decommissioning, the old server and tunnel remain installed. An approved cutover rollback can restore the old tunnel hostname and start the installed container. Do not rebuild on the small server as part of this port.
 
-For a code-only Worker failure, use `pnpm ops rollback` in an authorized operations context. Review schema compatibility first. Code rollback does not restore D1.
+For a Worker code failure, use `pnpm exec wrangler rollback` in an authorized operations context. Check schema compatibility first. Code rollback does not restore D1 data.
 
-D1 Time Travel on Free retains seven days. A restore discards later writes and requires explicit approval for the loss. Save a current bookmark/export, stop writes, inspect the target bookmark, restore, verify the public pages and cached availability, and save the undo bookmark. Use forward SQL migrations for routine changes. Do not restore production as a drill.
-
-Alchemy stores encrypted state in the app-specific state Worker and SQLite Durable Object, with its generated key/token in Cloudflare Secrets Store. Retain that state across releases. A missing state store is not permission to delete or recreate D1.
+D1 Time Travel on Free retains seven days. A restore discards later writes and needs explicit approval for that loss. Save a current bookmark/export, stop writes, inspect the target bookmark, restore, verify the site, and save the undo bookmark. Prefer forward SQL migrations for routine fixes. Never use production for a restore drill.

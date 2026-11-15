@@ -8,6 +8,6 @@ if (existsSync('.local/ready.json')) {
   } catch {}
   if (running) throw new Error('Stop pnpm dev before resetting local data.')
 }
-rmSync('.local/fixture-d1', { recursive: true, force: true })
+rmSync('.local/wrangler-d1', { recursive: true, force: true })
 rmSync('.local/ready.json', { force: true })
 console.log('Local fixture database removed.')

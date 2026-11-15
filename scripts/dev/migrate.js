@@ -1,30 +1,24 @@
-import { applyMigrations, MigrationError } from '@alchemy.run/sql/Migrations'
-import { NodeServices } from '@effect/platform-node'
-import { Effect } from 'effect'
+import { spawnSync } from 'node:child_process'
 
-// Use the production migration reader and bookkeeping with real local D1.
-export function migrateLocalDatabase(db) {
-  const attempt = (run) =>
-    Effect.tryPromise({
-      try: run,
-      catch: (cause) => new MigrationError({ message: 'Local D1 migration failed', cause }),
-    })
-  return Effect.runPromise(
-    applyMigrations({
-      resolved: { dir: 'db/migrations', table: '__alchemy_migrations' },
-      executor: {
-        dialect: 'sqlite',
-        query: (sql, params = []) =>
-          attempt(async () => {
-            const statement = db.prepare(sql)
-            const result = await (params.length ? statement.bind(...params) : statement).all()
-            return result.results
-          }),
-        batch: (statements) =>
-          attempt(async () => {
-            await db.batch(statements.map((sql) => db.prepare(sql)))
-          }),
-      },
-    }).pipe(Effect.provide(NodeServices.layer)),
+export function migrateLocalDatabase(persist) {
+  const result = spawnSync(
+    'pnpm',
+    [
+      'exec',
+      'wrangler',
+      'd1',
+      'migrations',
+      'apply',
+      'drhoodskin',
+      '--local',
+      '--persist-to',
+      persist,
+    ],
+    {
+      encoding: 'utf8',
+      env: { ...process.env, WRANGLER_SEND_METRICS: 'false' },
+    },
   )
+  if (result.status !== 0)
+    throw new Error(`Local D1 migration failed.\n${result.stdout}\n${result.stderr}`)
 }

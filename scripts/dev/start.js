@@ -5,7 +5,7 @@ import { refuseCredentials } from '../no-credentials.js'
 refuseCredentials()
 await mkdir('.local', { recursive: true })
 const runtime = await startRuntime({
-  persist: '.local/fixture-d1',
+  persist: '.local/wrangler-d1',
   port: Number(process.env.APP_DEV_PORT || 0),
   onLog: (log) => appendFileSync('.local/requests.jsonl', JSON.stringify(log) + '\n'),
 })
