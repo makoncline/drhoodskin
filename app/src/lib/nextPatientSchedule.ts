@@ -3,6 +3,7 @@ import { parse } from 'node-html-parser'
 // These are the public, read-only requests the official NextPatient widget makes.
 // They are undocumented; production use needs USDP or NextPatient approval.
 
+const nextPatientOrigin = 'https://nextpatient.co'
 const practiceId = '5596'
 const entityId = '60744'
 const officeTimeZone = 'America/Denver'
@@ -115,9 +116,14 @@ function parseWindow(window: WindowResponse) {
           .querySelectorAll('a.nextpatient-slot-time')
           .flatMap((link) => {
             const minutes = parseClock(link.text)
-            const href = link.getAttribute('href') ?? ''
-            const id = /\/p\/\d+\/(\d+)\/appt-book/.exec(href)?.[1]
-            if (minutes === null || !id) return []
+            const url = new URL(
+              link.getAttribute('href') ?? '',
+              nextPatientOrigin,
+            )
+            const href = url.toString()
+            const id = /^\/p\/\d+\/(\d+)\/appt-book/.exec(url.pathname)?.[1]
+            if (minutes === null || !id || url.origin !== nextPatientOrigin)
+              return []
             return [
               {
                 id,

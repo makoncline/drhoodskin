@@ -3,6 +3,7 @@ import {
   addDays,
   findEarlyOpenings,
   isoStart,
+  isoToday,
   loadAvailability,
   withoutPastSlots,
 } from './nextPatientSchedule'
@@ -78,6 +79,38 @@ describe('schedule safety', () => {
       Date.parse('2027-01-15T09:00:00-07:00'),
     )
     expect(open.slots.map((slot) => slot.minutes)).toEqual([600])
+  })
+
+  it('turns booking links into absolute NextPatient links and drops off-site links', async () => {
+    const startDay = isoToday()
+    const cells = [
+      '<a class="nextpatient-slot-time" href="/p/5596/111/appt-book?reason_id=56487">8:40am</a>',
+      '<a class="nextpatient-slot-time" href="https://example.com/p/5596/222/appt-book">8:50am</a>',
+      '',
+    ].map((links) => `<td class="nextpatient-schedule-day-slots">${links}</td>`)
+    vi.stubGlobal(
+      'fetch',
+      vi.fn((url: string) => {
+        const requested = new URL(url).searchParams.get('day') ?? startDay
+        const html =
+          requested === startDay
+            ? `<table><tr>${cells.join('')}</tr></table>`
+            : '<table><tr><td class="nextpatient-schedule-day-slots nextpatient-schedule-next-available" colspan=3>First available</td></tr></table>'
+        return Promise.resolve(
+          new Response(
+            JSON.stringify({ html, day: requested, next_slot_day: '' }),
+          ),
+        )
+      }),
+    )
+    const availability = await loadAvailability(56487)
+    const slots =
+      availability.kind === 'slots'
+        ? availability.days.flatMap((entry) => entry.slots)
+        : []
+    expect(slots.map((slot) => slot.href)).toEqual([
+      'https://nextpatient.co/p/5596/111/appt-book?reason_id=56487',
+    ])
   })
 
   it('treats an unrecognized scheduler page as a failure, not an empty schedule', async () => {
