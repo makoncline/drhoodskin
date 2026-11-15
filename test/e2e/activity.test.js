@@ -143,3 +143,23 @@ test('activity-persistence-salt-retention-and-export', async (t) => {
   )
   assert.deepEqual(JSON.parse(cli), summary)
 })
+
+test('activity-storage-failure-keeps-site-and-cron-working', async (t) => {
+  const { runtime: r } = await start(t)
+  await r.db.prepare('DROP TABLE activity').run()
+  const page = await r.dispatch('/', { headers: { 'user-agent': 'Mozilla/5.0 Chrome/157.0' } })
+  assert.equal(page.status, 200)
+  await page.text()
+  await eventually(
+    () => r.logs,
+    (logs) => assert.ok(logs.some((log) => log.message === 'Activity log write failed')),
+  )
+  const result = await r.scheduled()
+  assert.equal(result.outcome, 'ok')
+  assert.ok(r.fixture.requests.length > 0)
+  assert.ok(r.logs.some((log) => log.message === 'Activity retention failed'))
+  assert.equal(
+    await r.db.prepare("SELECT * FROM maintenance WHERE name = 'activity'").first(),
+    null,
+  )
+})
