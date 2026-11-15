@@ -155,35 +155,60 @@ describe('GET /api/appointments', () => {
     )
   })
 
-  it('returns full-body exam slots without substituting office times', async () => {
-    const response = await appointments('?visit=full-body-exam')
-    expect(response.status).toBe(200)
-    const result = JSON.parse(await response.text())
-    expect(result).toMatchObject({
-      visit: 'full-body-exam',
-      status: 'open',
-      pageUrl: `${site}/book?visit=exam`,
-      totalMatches: 2,
-      totalDays: 2,
-      days: [
-        {
-          date: '2026-11-16',
-          times: [
-            {
-              time: '2:30 PM',
-              start: '2026-11-16T14:30:00-07:00',
-              bookingUrl:
-                'https://nextpatient.co/p/5596/56485202611160/appt-book?reason_id=56485',
-            },
-          ],
-        },
-        { date: '2026-11-20', times: [{ time: '10:30 AM' }] },
-      ],
-      otherVisit: {
-        visit: 'office',
+  it.each(['full-body-exam', 'exam'])(
+    'returns full-body exam slots for visit=%s without substituting office times',
+    async (visit) => {
+      const response = await appointments(`?visit=${visit}`)
+      expect(response.status).toBe(200)
+      const result = JSON.parse(await response.text())
+      expect(result).toMatchObject({
+        visit: 'full-body-exam',
         status: 'open',
+        pageUrl: `${site}/book?visit=exam`,
+        totalMatches: 2,
+        totalDays: 2,
+        days: [
+          {
+            date: '2026-11-16',
+            times: [
+              {
+                time: '2:30 PM',
+                start: '2026-11-16T14:30:00-07:00',
+                bookingUrl:
+                  'https://nextpatient.co/p/5596/56485202611160/appt-book?reason_id=56485',
+              },
+            ],
+          },
+          { date: '2026-11-20', times: [{ time: '10:30 AM' }] },
+        ],
+        otherVisit: {
+          visit: 'office',
+          status: 'open',
+          soonest: { time: '8:40 AM' },
+        },
+      })
+    },
+  )
+
+  it.each(['office', ''])(
+    'returns office times for visit=%s',
+    async (visit) => {
+      const response = await appointments(`?visit=${visit}`)
+      expect(response.status).toBe(200)
+      expect(JSON.parse(await response.text())).toMatchObject({
+        visit: 'office',
+        totalMatches: 16,
         soonest: { time: '8:40 AM' },
-      },
+      })
+    },
+  )
+
+  it('rejects an invalid visit instead of returning office times', async () => {
+    const response = await appointments('?visit=unknown')
+    expect(response.status).toBe(400)
+    expect(response.headers.get('content-type')).toContain('application/json')
+    expect(JSON.parse(await response.text())).toEqual({
+      error: 'Invalid visit. Use office, full-body-exam, or exam.',
     })
   })
 
@@ -225,6 +250,73 @@ describe('GET /api/appointments', () => {
       avoid: '08:50-09:30,14:00-14:50',
     })
   })
+
+  it('combines repeated weekday, time-band, and busy-range query keys', async () => {
+    const response = await appointments(
+      '?days=mon&days=fri&times=early-morning&times=late-afternoon&avoid=08:50-09:30&avoid=14:00-14:50',
+    )
+    expect(response.status).toBe(200)
+    const result = JSON.parse(await response.text())
+    expect(result).toMatchObject({
+      filter: {
+        days: ['mon', 'fri'],
+        times: ['early-morning', 'late-afternoon'],
+      },
+      totalMatches: 5,
+      totalDays: 3,
+      days: [
+        { date: '2026-11-16', times: [{ time: '8:40 AM' }] },
+        {
+          date: '2026-11-20',
+          times: [
+            { time: '8:40 AM' },
+            { time: '9:30 AM' },
+            { time: '2:50 PM' },
+          ],
+        },
+        { date: '2026-11-23', times: [{ time: '8:40 AM' }] },
+      ],
+    })
+    const commaSeparated = await appointments(
+      '?days=mon,fri&times=early-morning,late-afternoon&avoid=08:50-09:30,14:00-14:50',
+    )
+    expect(commaSeparated.status).toBe(200)
+    expect(JSON.parse(await commaSeparated.text())).toEqual(result)
+  })
+
+  it.each([
+    ['office', undefined, '2026-11-16', '10:00 AM'],
+    ['full-body-exam', 'exam', '2026-11-20', '10:30 AM'],
+  ])(
+    'preserves the visit and filters through pageUrl for %s',
+    async (visit, pageVisit, date, time) => {
+      const response = await appointments(
+        `?visit=${visit}&days=mon,fri&times=late-morning,late-afternoon&avoid=14:00-15:00,11:00-12:00`,
+      )
+      expect(response.status).toBe(200)
+      const result = JSON.parse(await response.text())
+      expect(result).toMatchObject({
+        visit,
+        filter: {
+          days: ['mon', 'fri'],
+          times: ['late-morning', 'late-afternoon'],
+        },
+        totalMatches: 1,
+        days: [{ date, times: [{ time }] }],
+      })
+      const page = new URL(result.pageUrl)
+      expect(`${page.origin}${page.pathname}`).toBe(`${site}/book`)
+      expect(Object.fromEntries(page.searchParams)).toEqual({
+        ...(pageVisit ? { visit: pageVisit } : {}),
+        days: 'mon,fri',
+        times: 'late-morning,late-afternoon',
+        avoid: '14:00-15:00,11:00-12:00',
+      })
+      const roundTrip = await appointments(page.search)
+      expect(roundTrip.status).toBe(200)
+      expect(JSON.parse(await roundTrip.text())).toEqual(result)
+    },
+  )
 
   it.each([
     ['0', 1],
@@ -335,7 +427,7 @@ describe('POST /mcp', () => {
             type: 'object',
             properties: expect.objectContaining({
               visit: expect.objectContaining({
-                enum: ['office', 'full-body-exam'],
+                enum: ['office', 'full-body-exam', 'exam'],
               }),
               days: expect.objectContaining({ type: 'array' }),
               times: expect.objectContaining({ type: 'array' }),
@@ -350,13 +442,13 @@ describe('POST /mcp', () => {
     expect(schedulerFetch).not.toHaveBeenCalled()
   })
 
-  it('finds appointments with matching text, structured data, and patient links', async () => {
+  it('finds exam appointments with matching text, structured data, and patient links', async () => {
     const response = await rpc(
       'tools/call',
       {
         name: 'find_appointments',
         arguments: {
-          visit: 'full-body-exam',
+          visit: 'exam',
           days: ['fri'],
           times: ['late-morning'],
           avoid: ['11:00-12:00'],
@@ -392,6 +484,27 @@ describe('POST /mcp', () => {
     expect(text).toContain(
       'A full-body skin exam needs a full-body slot. Never offer an office-visit time for a full-body exam.',
     )
+  })
+
+  it('returns a tool input error for an invalid appointment visit', async () => {
+    const response = await rpc('tools/call', {
+      name: 'find_appointments',
+      arguments: { visit: 'unknown' },
+    })
+    expect(response.status).toBe(200)
+    expect(JSON.parse(await response.text())).toEqual({
+      jsonrpc: '2.0',
+      id: 1,
+      result: {
+        isError: true,
+        content: [
+          {
+            type: 'text',
+            text: 'Invalid visit. Use office, full-body-exam, or exam.',
+          },
+        ],
+      },
+    })
   })
 
   it('returns office details in text and structured content without a scheduler request', async () => {

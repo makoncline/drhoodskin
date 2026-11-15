@@ -31,6 +31,7 @@ import { mcpTools } from './src/lib/mcpTools'
 import {
   findAppointments,
   findAppointmentsTool,
+  InvalidVisitError,
 } from './src/server/appointments'
 
 type JsonRpcRequest = {
@@ -385,9 +386,18 @@ export default defineHandler(async (event) => {
   if (method === 'GET' && pathname === agentPaths.appointments) {
     try {
       return jsonResponse(
-        await findAppointments(Object.fromEntries(url.searchParams)),
+        await findAppointments({
+          visit: url.searchParams.get('visit') ?? undefined,
+          days: url.searchParams.getAll('days'),
+          times: url.searchParams.getAll('times'),
+          avoid: url.searchParams.getAll('avoid'),
+          limit: url.searchParams.get('limit') ?? undefined,
+        }),
       )
-    } catch {
+    } catch (error) {
+      if (error instanceof InvalidVisitError) {
+        return jsonResponse({ error: error.message }, { status: 400 })
+      }
       return jsonResponse(
         {
           error: 'Open times could not be loaded.',

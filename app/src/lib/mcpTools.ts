@@ -78,8 +78,8 @@ export const mcpTools = [
       properties: {
         visit: {
           description:
-            'Office visit for a specific skin concern, or full-body skin exam requiring a full-body slot. Never substitute an office visit for a full-body exam. Default office.',
-          enum: ['office', 'full-body-exam'],
+            'Office visit for a specific skin concern, or full-body skin exam requiring a full-body slot. exam is an alias for full-body-exam. Never substitute an office visit for a full-body exam. Missing or empty means office. Other values are rejected.',
+          enum: ['office', 'full-body-exam', 'exam'],
           type: 'string',
         },
         days: {
