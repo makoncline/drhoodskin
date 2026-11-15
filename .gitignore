@@ -3,3 +3,11 @@ data/
 .DS_Store
 .playwright-mcp/
 .impeccable/review/
+node_modules/
+.local/
+.alchemy/
+.tanstack/
+dist/
+test-results/
+.env*
+!ops/.env.schema

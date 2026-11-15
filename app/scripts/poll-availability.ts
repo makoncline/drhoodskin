@@ -1,6 +1,6 @@
 import { resolve } from 'node:path'
-import { loadAvailability, visitReasons } from '../src/lib/nextPatientSchedule.ts'
-import { openAvailabilityStore, recordRun } from '../src/server/availabilityStore.ts'
+import { loadAvailability, visitReasons } from '../../src/lib/nextPatientSchedule.ts'
+import { openAvailabilityStore, recordRun } from '../../src/server/availabilityStore.ts'
 
 function isPollingHours(date = new Date()) {
   const hour = Number(
