@@ -189,12 +189,14 @@ describe.each([
 })
 
 describe('POST /api/events', () => {
-  it('persists only known click events from people', async () => {
+  it('persists only known events from people', async () => {
     const file = activityLogFile()
     for (const [name, userAgent] of [
       ['hero_book_page_click', 'Mozilla/5.0 Chrome/130.0'],
+      ['book_page_view', 'Mozilla/5.0 Chrome/130.0'],
       ['unknown_click', 'Mozilla/5.0 Chrome/130.0'],
       ['hero_book_page_click', 'curl/8.6.0'],
+      ['book_page_view', 'curl/8.6.0'],
     ]) {
       const response = await server.fetch(
         new Request(`${site}/api/events`, {
@@ -214,6 +216,11 @@ describe('POST /api/events', () => {
         k: 'event',
         a: 'human',
         e: 'hero_book_page_click',
+      }),
+      expect.objectContaining({
+        k: 'event',
+        a: 'human',
+        e: 'book_page_view',
       }),
     ])
     expect(schedulerFetch).not.toHaveBeenCalled()

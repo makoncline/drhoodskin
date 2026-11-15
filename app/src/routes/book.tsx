@@ -61,6 +61,7 @@ export const Route = createFileRoute('/book')({
     }
   },
   loader: () => getSchedulerData({ data: {} }),
+  onEnter: () => trackEvent('book_page_view'),
   shouldReload: false,
   pendingComponent: LoadingState,
   head: () => {

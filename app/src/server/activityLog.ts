@@ -62,6 +62,17 @@ export function classifyAgent(userAgent: string): {
   return { a: 'human' }
 }
 
+const dayFormatter = new Intl.DateTimeFormat('en-CA', {
+  timeZone: 'America/Denver',
+  year: 'numeric',
+  month: '2-digit',
+  day: '2-digit',
+})
+
+export function activityDay(date: Date) {
+  return dayFormatter.format(date)
+}
+
 let salt = { day: '', value: '' }
 
 function dailySalt(day: string) {
@@ -99,7 +110,7 @@ export function requestContext(headers: Headers, siteHost: string) {
     ...agent,
     v:
       agent.a === 'human'
-        ? visitorId(ip, userAgent, now.toISOString().slice(0, 10))
+        ? visitorId(ip, userAgent, activityDay(now))
         : undefined,
     c: headers.get('cf-ipcountry') ?? undefined,
     r: referrerHost,
