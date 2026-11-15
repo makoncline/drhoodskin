@@ -101,6 +101,14 @@ export function parseAvoid(input: unknown) {
   })
 }
 
+function clock24(minutes: number) {
+  return `${String(Math.floor(minutes / 60)).padStart(2, '0')}:${String(minutes % 60).padStart(2, '0')}`
+}
+
+export function avoidParam(ranges: ReturnType<typeof parseAvoid>) {
+  return ranges.map((range) => `${clock24(range.from)}-${clock24(range.to)}`)
+}
+
 export function openingMatches(
   { date, slot }: Opening,
   filter: AppointmentFilter,

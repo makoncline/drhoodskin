@@ -1,5 +1,6 @@
 import { drHoodVerified } from '../content/drHoodVerified'
 import {
+  avoidParam,
   describeFilter,
   parseAvoid,
   parseFilter,
@@ -7,7 +8,7 @@ import {
   weekdayOf,
   weekdays,
 } from '../lib/appointmentSearch'
-import type { Opening } from '../lib/appointmentSearch'
+import type { AppointmentFilter, Opening } from '../lib/appointmentSearch'
 import {
   formatClock,
   isoToday,
@@ -40,6 +41,19 @@ type AppointmentDay = {
 
 function visitName(visit: CachedVisit) {
   return visit === 'office' ? 'office visit' : 'full-body skin exam'
+}
+
+function bookPageUrl(
+  visit: CachedVisit,
+  filter: AppointmentFilter,
+  avoid: ReturnType<typeof parseAvoid>,
+) {
+  const url = new URL('/book', content.seo.canonical)
+  if (visit === 'full-body-exam') url.searchParams.set('visit', 'exam')
+  if (filter.days.length) url.searchParams.set('days', filter.days.join(','))
+  if (filter.times.length) url.searchParams.set('times', filter.times.join(','))
+  if (avoid.length) url.searchParams.set('avoid', avoidParam(avoid).join(','))
+  return url.toString()
 }
 
 export async function findAppointments(query: AppointmentQuery) {
@@ -122,6 +136,7 @@ export async function findAppointments(query: AppointmentQuery) {
       callbackRequest: content.booking.callbackHref,
     },
     officialCalendar: officialCalendarUrl,
+    pageUrl: bookPageUrl(visit, filter, avoid),
     status: search.soonest ? ('open' as const) : ('call-to-schedule' as const),
     message: search.soonest
       ? null
@@ -144,7 +159,7 @@ export async function findAppointments(query: AppointmentQuery) {
         : null,
     },
     instructions:
-      'A full-body skin exam needs a full-body slot. Never offer an office-visit time for a full-body exam. An office visit is for a specific concern. Confirm the visit type and time with the patient. Give booking links to the patient; do not open them. The patient completes booking on the official U.S. Dermatology Partners page. Times are Mountain Time. If nothing fits, or the patient needs care sooner, call the office.',
+      'A full-body skin exam needs a full-body slot. Never offer an office-visit time for a full-body exam. An office visit is for a specific concern. Confirm the visit type and time with the patient. Give booking links to the patient; do not open them. To let the patient browse these times, give them pageUrl. The patient completes booking on the official U.S. Dermatology Partners page. Times are Mountain Time. If nothing fits, or the patient needs care sooner, call the office.',
   }
 }
 
@@ -189,6 +204,7 @@ export async function findAppointmentsTool(args: AppointmentQuery | undefined) {
         `The other visit type, ${visitName(other.visit)}, has an unfiltered opening on ${other.soonest.weekday}, ${other.soonest.date} at ${other.soonest.time} Mountain Time: ${other.soonest.bookingUrl}. It may not fit the patient's schedule.`,
       )
     }
+    text.push(`See these times on Dr. Hood’s site: ${result.pageUrl}`)
     text.push(result.instructions)
     return {
       content: [{ type: 'text' as const, text: text.join('\n') }],

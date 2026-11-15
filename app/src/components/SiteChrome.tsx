@@ -1,3 +1,4 @@
+import { Link } from '@tanstack/react-router'
 import { Phone } from 'lucide-react'
 import { drHoodVerified } from '../content/drHoodVerified'
 import { trackEvent } from '../lib/analytics'
@@ -10,7 +11,9 @@ export function SiteHeader({ showBooking = true }: { showBooking?: boolean }) {
       <div className="shell flex min-h-16 items-center justify-between gap-4 py-2.5">
         <a href="/#top" className="flex flex-col leading-tight no-underline">
           <span className="font-display text-lg">Dr. Channing Hood</span>
-          <span className="text-sm text-ink-muted">Dermatology · Golden, Colorado</span>
+          <span className="text-sm text-ink-muted">
+            Dermatology · Golden, Colorado
+          </span>
         </a>
         <nav aria-label="Primary" className="flex items-center gap-2 sm:gap-3">
           <a
@@ -26,16 +29,18 @@ export function SiteHeader({ showBooking = true }: { showBooking?: boolean }) {
             className="inline-flex min-h-11 min-w-11 items-center justify-center gap-2 rounded-lg px-3 text-[0.95rem] font-semibold no-underline transition-colors hover:bg-stone"
           >
             <Phone aria-hidden="true" className="h-4 w-4" />
-            <span className="hidden sm:inline">{content.office.phoneDisplay}</span>
+            <span className="hidden sm:inline">
+              {content.office.phoneDisplay}
+            </span>
           </a>
           {showBooking ? (
-            <a
-              href={content.booking.href}
+            <Link
+              to="/book"
               onClick={() => trackEvent('header_schedule_click')}
               className="btn-primary hidden min-h-11 px-4 py-2 text-[0.95rem] md:inline-flex"
             >
               Book an appointment
-            </a>
+            </Link>
           ) : null}
         </nav>
       </div>
@@ -43,43 +48,67 @@ export function SiteHeader({ showBooking = true }: { showBooking?: boolean }) {
   )
 }
 
-
-export function SiteFooter({ clearMobileBar = false }: { clearMobileBar?: boolean }) {
+export function SiteFooter({
+  clearMobileBar = false,
+}: {
+  clearMobileBar?: boolean
+}) {
   return (
-    <footer className={`surface-dark bg-night text-night-muted ${clearMobileBar ? 'pb-24 md:pb-0' : ''}`}>
+    <footer
+      className={`surface-dark bg-night text-night-muted ${clearMobileBar ? 'pb-24 md:pb-0' : ''}`}
+    >
       <div className="shell grid gap-8 py-12 text-[0.95rem] md:grid-cols-[minmax(0,1fr)_auto] md:items-end">
         <div>
-          <p className="m-0 font-display text-lg text-white">{content.identity.name}</p>
+          <p className="m-0 font-display text-lg text-white">
+            {content.identity.name}
+          </p>
           <p className="m-0">
             {content.identity.title}, {content.office.name}
           </p>
           <p className="m-0">
-            {content.office.address1}, {content.office.city}, {content.office.state}{' '}
-            {content.office.zip} · {content.office.phoneDisplay}
+            {content.office.address1}, {content.office.city},{' '}
+            {content.office.state} {content.office.zip} ·{' '}
+            {content.office.phoneDisplay}
           </p>
           <p className="mt-4 mb-0">
-            This is Dr. Hood’s personal site. U.S. Dermatology Partners schedules all
-            appointments. Information last reviewed {content.meta.lastReviewed}.
+            This is Dr. Hood’s personal site. U.S. Dermatology Partners
+            schedules all appointments. Information last reviewed{' '}
+            {content.meta.lastReviewed}.
           </p>
         </div>
-        <ul role="list" className="m-0 flex list-none flex-wrap gap-x-5 gap-y-2 p-0">
+        <ul
+          role="list"
+          className="m-0 flex list-none flex-wrap gap-x-5 gap-y-2 p-0"
+        >
           <li>
-            <a href={content.officialSources.provider} className="font-semibold text-white underline decoration-white/40 hover:decoration-white">
+            <a
+              href={content.officialSources.provider}
+              className="font-semibold text-white underline decoration-white/40 hover:decoration-white"
+            >
               USDP provider profile
             </a>
           </li>
           <li>
-            <a href={content.officialSources.goldenOffice} className="font-semibold text-white underline decoration-white/40 hover:decoration-white">
+            <a
+              href={content.officialSources.goldenOffice}
+              className="font-semibold text-white underline decoration-white/40 hover:decoration-white"
+            >
               Golden office page
             </a>
           </li>
           <li>
-            <a href={content.booking.href} className="font-semibold text-white underline decoration-white/40 hover:decoration-white">
+            <Link
+              to="/book"
+              className="font-semibold text-white underline decoration-white/40 hover:decoration-white"
+            >
               Dr. Hood’s open times
-            </a>
+            </Link>
           </li>
           <li>
-            <a href={content.booking.callbackHref} className="font-semibold text-white underline decoration-white/40 hover:decoration-white">
+            <a
+              href={content.booking.callbackHref}
+              className="font-semibold text-white underline decoration-white/40 hover:decoration-white"
+            >
               Callback request form
             </a>
           </li>

@@ -3,7 +3,7 @@ import { join } from 'node:path'
 import type { ActivityEntry } from './activityLog.ts'
 
 export const bookingEvents = {
-  schedule: /_schedule_click$/,
+  schedule: /^book_(?:early_)?schedule_click$|_scheduler_click$/,
   callback: /_callback_click$/,
   call: /_call_click$/,
 } as const
@@ -117,7 +117,7 @@ export function formatActivityReport(
     '',
     `Page views (people): ${summary.pageViews} home, ${summary.bookPageViews} booking page`,
     `Visitors (unique per day, summed): ${summary.visitorDays}`,
-    `Booking actions: ${summary.booking.schedule} see open times, ${summary.booking.callback} callback requests, ${summary.booking.call} calls`,
+    `Booking actions: ${summary.booking.schedule} official scheduler visits, ${summary.booking.callback} callback requests, ${summary.booking.call} calls`,
     `Visitors who took a booking action: ${summary.bookingVisitorDays} (${(summary.bookingRate * 100).toFixed(1)}%)`,
     '',
     'Visitors by day:',

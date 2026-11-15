@@ -1,11 +1,19 @@
 import { createFileRoute, useNavigate, useRouter } from '@tanstack/react-router'
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { ArrowUpRight, Check, ChevronDown, Phone, RotateCw } from 'lucide-react'
+import {
+  ArrowUpRight,
+  Check,
+  ChevronDown,
+  Phone,
+  RotateCcw,
+  RotateCw,
+} from 'lucide-react'
 import { drHoodVerified } from '../content/drHoodVerified'
 import { trackEvent } from '../lib/analytics'
 import { OfficeStatus } from '../components/OfficeStatus'
 import { SiteFooter, SiteHeader } from '../components/SiteChrome'
 import {
+  avoidParam,
   describeFilter,
   isFiltered,
   parseAvoid,
@@ -26,7 +34,6 @@ import {
   daysBetween,
   formatClock,
   isoToday,
-  officialCalendarUrl,
   withoutPastSlots,
 } from '../lib/nextPatientSchedule'
 import type { ScheduleDay, Slot } from '../lib/nextPatientSchedule'
@@ -69,7 +76,6 @@ export const Route = createFileRoute('/book')({
       meta: [
         { title },
         { name: 'description', content: description },
-        { name: 'robots', content: 'noindex, follow' },
         { name: 'theme-color', content: '#f7f5f2' },
         { property: 'og:type', content: 'website' },
         { property: 'og:title', content: 'Book with Dr. Hood' },
@@ -104,14 +110,8 @@ const pickerDays = weekdays.filter((day) => day.index >= 1 && day.index <= 5)
 type PageFilter = AppointmentFilter & { avoid: string[] }
 const noFilter: PageFilter = { days: [], times: [], avoid: [] }
 
-function clock24(minutes: number) {
-  return `${String(Math.floor(minutes / 60)).padStart(2, '0')}:${String(minutes % 60).padStart(2, '0')}`
-}
-
 function normalizeAvoid(input: unknown) {
-  return parseAvoid(input).map(
-    (range) => `${clock24(range.from)}-${clock24(range.to)}`,
-  )
+  return avoidParam(parseAvoid(input))
 }
 
 function hasFilter(filter: PageFilter) {
@@ -502,29 +502,48 @@ function AvailabilityPanel({
   onChange: (filter: PageFilter) => void
 }) {
   const filtered = hasFilter(filter)
+  const [open, setOpen] = useState(filtered)
   return (
-    <details
-      open={filtered}
-      className="group mt-4 rounded-xl border border-rule bg-card px-4 sm:px-5"
+    <section
+      aria-label="When can you come in?"
+      className="mt-4 rounded-xl border border-rule bg-card px-4 sm:px-5"
     >
-      <summary className="flex min-h-13 cursor-pointer list-none items-center justify-between gap-3 py-2 [&::-webkit-details-marker]:hidden">
-        <span className="min-w-0">
-          <span className="block text-sm font-semibold text-ink-muted">
-            When can you come in?
+      <div className="flex min-h-13 items-center gap-2 py-2">
+        <button
+          type="button"
+          aria-expanded={open}
+          aria-controls="availability-options"
+          onClick={() => setOpen(!open)}
+          className="flex min-w-0 flex-1 items-center justify-between gap-3 text-left"
+        >
+          <span className="min-w-0">
+            <span className="block text-sm font-semibold text-ink-muted">
+              When can you come in?
+            </span>
+            <span className="block truncate font-semibold">
+              {describePageFilter(filter)}
+            </span>
           </span>
-          <span className="block truncate font-semibold">
-            {describePageFilter(filter)}
+          <span className="flex shrink-0 items-center gap-1 text-sm font-semibold text-action">
+            {filtered ? 'Change' : 'Choose'}
+            <ChevronDown
+              aria-hidden="true"
+              className={`h-4 w-4 transition-transform ${open ? 'rotate-180' : ''}`}
+            />
           </span>
-        </span>
-        <span className="flex shrink-0 items-center gap-1 text-sm font-semibold text-action">
-          {filtered ? 'Change' : 'Choose'}
-          <ChevronDown
-            aria-hidden="true"
-            className="h-4 w-4 transition-transform group-open:rotate-180"
-          />
-        </span>
-      </summary>
-      <div className="pb-4">
+        </button>
+        {filtered ? (
+          <button
+            type="button"
+            onClick={() => onChange(noFilter)}
+            className="inline-flex min-h-11 shrink-0 items-center gap-1 rounded-md border-l border-rule pr-1 pl-3 text-sm font-semibold text-action hover:underline"
+          >
+            <RotateCcw aria-hidden="true" className="h-3.5 w-3.5" />
+            Reset
+          </button>
+        ) : null}
+      </div>
+      <div id="availability-options" hidden={!open} className="pb-4">
         <div
           className="grid grid-cols-5 gap-1.5"
           role="group"
@@ -576,25 +595,14 @@ function AvailabilityPanel({
             </button>
           </p>
         ) : null}
-        <div className="mt-3 flex items-start justify-between gap-3 text-sm text-ink-muted">
-          <span>
-            Pick none to see every time.
-            {hours
-              ? ` Dr. Hood’s times run ${hours.first} to ${hours.last}.`
-              : ''}
-          </span>
-          {filtered ? (
-            <button
-              type="button"
-              onClick={() => onChange(noFilter)}
-              className="shrink-0 rounded-md px-1.5 py-0.5 font-semibold text-action hover:bg-action-tint"
-            >
-              Clear
-            </button>
-          ) : null}
-        </div>
+        <p className="mt-3 mb-0 text-sm text-ink-muted">
+          Pick none to see every time.
+          {hours
+            ? ` Dr. Hood’s times run ${hours.first} to ${hours.last}.`
+            : ''}
+        </p>
       </div>
-    </details>
+    </section>
   )
 }
 
@@ -1142,27 +1150,40 @@ function CheckedAt({
   onRefresh: () => void
 }) {
   return (
-    <p className="mt-6 mb-0 flex flex-wrap items-center gap-x-2 text-sm text-ink-muted">
-      Times checked{' '}
-      {new Date(checkedAt).toLocaleTimeString('en-US', {
-        hour: 'numeric',
-        minute: '2-digit',
-        timeZone: 'America/Denver',
-      })}{' '}
-      MT.
-      <button
-        type="button"
-        onClick={onRefresh}
-        disabled={refreshing}
-        className="inline-flex min-h-9 items-center gap-1 rounded-md px-1.5 font-semibold text-action hover:bg-action-tint disabled:opacity-60"
-      >
-        <RotateCw
-          aria-hidden="true"
-          className={`h-3.5 w-3.5 ${refreshing ? 'animate-spin motion-reduce:animate-none' : ''}`}
-        />
-        {refreshing ? 'Checking' : 'Refresh'}
-      </button>
-    </p>
+    <div className="mt-6 text-sm text-ink-muted">
+      <p className="m-0 flex flex-wrap items-center gap-x-2">
+        Times checked{' '}
+        {new Date(checkedAt).toLocaleTimeString('en-US', {
+          hour: 'numeric',
+          minute: '2-digit',
+          timeZone: 'America/Denver',
+        })}{' '}
+        MT.
+        <button
+          type="button"
+          onClick={onRefresh}
+          disabled={refreshing}
+          className="inline-flex min-h-9 items-center gap-1 rounded-md px-1.5 font-semibold text-action hover:bg-action-tint disabled:opacity-60"
+        >
+          <RotateCw
+            aria-hidden="true"
+            className={`h-3.5 w-3.5 ${refreshing ? 'animate-spin motion-reduce:animate-none' : ''}`}
+          />
+          {refreshing ? 'Checking' : 'Refresh'}
+        </button>
+      </p>
+      <p className="mt-1 mb-0">
+        Something look off?{' '}
+        <a
+          href={content.booking.schedulerHref}
+          onClick={() => trackEvent('book_scheduler_click')}
+          className="text-link"
+        >
+          Use the U.S. Dermatology Partners scheduler
+        </a>
+        .
+      </p>
+    </div>
   )
 }
 
@@ -1190,7 +1211,11 @@ function ErrorState({ onRetry }: { onRetry: () => void }) {
         <button type="button" onClick={onRetry} className="btn-primary">
           Try again
         </button>
-        <a href={officialCalendarUrl} className="btn-secondary">
+        <a
+          href={content.booking.schedulerHref}
+          onClick={() => trackEvent('book_scheduler_click')}
+          className="btn-secondary"
+        >
           Open the official calendar
         </a>
       </div>

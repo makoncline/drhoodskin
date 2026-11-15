@@ -1,5 +1,6 @@
 import { HeadContent, Scripts, createRootRoute } from '@tanstack/react-router'
 
+import { useScrollMemory } from '../lib/useScrollMemory'
 import appCss from '../styles.css?url'
 
 export const Route = createRootRoute({
@@ -31,6 +32,8 @@ export const Route = createRootRoute({
 })
 
 function RootDocument({ children }: { children: React.ReactNode }) {
+  useScrollMemory()
+
   return (
     <html lang="en">
       <head>

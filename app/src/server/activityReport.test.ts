@@ -76,7 +76,7 @@ describe('activity log and report', () => {
         ...requestContext(headers(phone, '198.51.100.1'), 'drhoodskin.com'),
         k: 'event',
         p: '/',
-        e: 'hero_schedule_click',
+        e: 'hero_scheduler_click',
       },
       dir,
     )

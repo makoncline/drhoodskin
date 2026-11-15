@@ -87,10 +87,12 @@ export const drHoodVerified = {
   booking: {
     heading: 'Book with Dr. Hood',
     ctaLabel: 'See open times',
-    href: 'https://nextpatient.co/p/5596/60744/appointments',
+    schedulerHref: 'https://nextpatient.co/p/5596/60744/appointments',
+    schedulerLabel:
+      'Or go straight to the U.S. Dermatology Partners scheduler.',
     scheduleOutcome: 'Books a specific time.',
     scheduleDetail:
-      'Pick an open time on the U.S. Dermatology Partners scheduling site. If no full-body skin exam times show, call the office.',
+      'See Dr. Hood’s open times, pick the days and hours that work for you, then confirm on the U.S. Dermatology Partners site.',
     callbackLabel: 'Request a callback',
     callbackHref:
       'https://www.usdermatologypartners.com/request-an-appointment/?state=Colorado&location=Golden',

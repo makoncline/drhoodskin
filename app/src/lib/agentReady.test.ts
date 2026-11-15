@@ -36,6 +36,7 @@ describe('agent-ready surfaces', () => {
 
     expect(new Set(toolNames).size).toBe(toolNames.length)
     expect(sitemapXml).toContain('<loc>https://drhoodskin.com/</loc>')
+    expect(sitemapXml).toContain('<loc>https://drhoodskin.com/book</loc>')
   })
 
   it('adds sources to focused endpoint payloads', () => {
