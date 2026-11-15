@@ -1,9 +1,9 @@
 services:
   drhoodskin:
-    build:
-      context: ./app
-      dockerfile: Dockerfile
+    image: ghcr.io/makoncline/drhoodskin:${IMAGE_TAG:?set IMAGE_TAG in .env}
     restart: unless-stopped
+    mem_limit: 256m
+    memswap_limit: 256m
     logging:
       driver: json-file
       options:
