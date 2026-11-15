@@ -116,10 +116,9 @@ function parseWindow(window: WindowResponse) {
           .querySelectorAll('a.nextpatient-slot-time')
           .flatMap((link) => {
             const minutes = parseClock(link.text)
-            const url = new URL(
-              link.getAttribute('href') ?? '',
-              nextPatientOrigin,
-            )
+            const target = link.getAttribute('href') ?? ''
+            if (!URL.canParse(target, nextPatientOrigin)) return []
+            const url = new URL(target, nextPatientOrigin)
             const href = url.toString()
             const id = /^\/p\/\d+\/(\d+)\/appt-book/.exec(url.pathname)?.[1]
             if (minutes === null || !id || url.origin !== nextPatientOrigin)
@@ -136,6 +135,11 @@ function parseWindow(window: WindowResponse) {
           }),
       }
     })
+  if (
+    root.querySelector('a.nextpatient-slot-time') &&
+    !days.some((day) => day.slots.length > 0)
+  )
+    throw new Error('Unrecognized scheduler slots')
   return { days, phoneOnly }
 }
 

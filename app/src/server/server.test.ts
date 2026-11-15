@@ -2,7 +2,26 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import type serverHandler from '../../server'
 
 type SchedulerMode =
-  'slots' | 'phone-only' | 'empty' | 'unrecognized' | 'failed'
+  | 'slots'
+  | 'phone-only'
+  | 'empty'
+  | 'unrecognized'
+  | 'failed'
+  | 'drifted-time'
+  | 'drifted-path'
+  | 'drifted-origin'
+  | 'drifted-url'
+
+const driftedSlotMarkup: Partial<Record<SchedulerMode, string>> = {
+  'drifted-time':
+    '<a class="nextpatient-slot-time" href="/p/5596/111/appt-book">Morning</a>',
+  'drifted-path':
+    '<a class="nextpatient-slot-time" href="/booking/111">8:40am</a>',
+  'drifted-origin':
+    '<a class="nextpatient-slot-time" href="https://example.com/p/5596/111/appt-book">8:40am</a>',
+  'drifted-url':
+    '<a class="nextpatient-slot-time" href="https://[invalid">8:40am</a>',
+}
 
 const site = 'https://drhoodskin.com'
 const now = new Date('2026-11-16T07:00:00Z')
@@ -64,6 +83,7 @@ beforeEach(async () => {
   vi.setSystemTime(now)
   vi.stubEnv('LOG_DIR', '')
   vi.spyOn(console, 'log').mockImplementation(() => undefined)
+  vi.spyOn(console, 'error').mockImplementation(() => undefined)
   scheduler = { office: 'slots', exam: 'slots' }
   schedulerFetch = vi.fn<typeof fetch>(async (input) => {
     const url = new URL(input instanceof Request ? input.url : String(input))
@@ -87,7 +107,9 @@ beforeEach(async () => {
           ? '<p>Please call to schedule</p>'
           : mode === 'empty'
             ? '<table><tr><td class="nextpatient-schedule-day-slots nextpatient-schedule-next-available" colspan="3">No times available</td></tr></table>'
-            : '<p>Down for maintenance</p>'
+            : driftedSlotMarkup[mode]
+              ? `<table><tr><td class="nextpatient-schedule-day-slots">${driftedSlotMarkup[mode]}</td></tr></table>`
+              : '<p>Down for maintenance</p>'
     return new Response(JSON.stringify({ html, day, next_slot_day: '' }), {
       headers: { 'Content-Type': 'application/json' },
     })
@@ -374,6 +396,28 @@ describe('GET /api/appointments', () => {
     })
   })
 
+  it.each([
+    'drifted-time',
+    'drifted-path',
+    'drifted-origin',
+    'drifted-url',
+  ] as const)(
+    'returns 502 instead of call guidance for %s slot markup',
+    async (mode) => {
+      scheduler.office = mode
+      const response = await appointments()
+      expect(response.status).toBe(502)
+      expect(JSON.parse(await response.text())).toEqual({
+        error: 'Open times could not be loaded.',
+        officialCalendar,
+        phone: '(720) 604-0602',
+      })
+      expect(console.error).toHaveBeenCalledExactlyOnceWith(
+        '[availability] office: Unrecognized scheduler slots',
+      )
+    },
+  )
+
   it('still returns office times when only the other visit cannot be loaded', async () => {
     scheduler.exam = 'failed'
     const response = await appointments()
@@ -596,14 +640,23 @@ describe('availability cache through GET /api/appointments', () => {
     const stale = await appointments()
     expect(stale.status).toBe(200)
     expect(JSON.parse(await stale.text())).toEqual(first)
-    await vi.advanceTimersByTimeAsync(1)
+    await vi.advanceTimersByTimeAsync(0)
     expect(schedulerFetch).toHaveBeenCalledTimes(requests + 2)
+    expect(console.error).toHaveBeenCalledTimes(2)
+    expect(console.error).toHaveBeenCalledWith(
+      '[availability] office: Schedule request failed (503)',
+    )
+    expect(console.error).toHaveBeenCalledWith(
+      '[availability] full-body-exam: Schedule request failed (503)',
+    )
+    await vi.advanceTimersByTimeAsync(59_999)
 
     const retry = await appointments()
     expect(retry.status).toBe(200)
     expect(JSON.parse(await retry.text())).toEqual(first)
-    await vi.advanceTimersByTimeAsync(1)
-    expect(schedulerFetch).toHaveBeenCalledTimes(requests + 4)
+    await vi.advanceTimersByTimeAsync(0)
+    expect(schedulerFetch).toHaveBeenCalledTimes(requests + 2)
+    expect(console.error).toHaveBeenCalledTimes(2)
   })
 
   it('returns an error when a failed refresh has no cached entry to use', async () => {
@@ -616,6 +669,120 @@ describe('availability cache through GET /api/appointments', () => {
       officialCalendar,
       phone: '(720) 604-0602',
     })
+  })
+
+  it('backs off without cached data, doubles the delay, and resets after recovery', async () => {
+    scheduler.office = 'failed'
+    scheduler.exam = 'failed'
+    expect((await appointments()).status).toBe(502)
+    await vi.advanceTimersByTimeAsync(0)
+    expect(schedulerFetch).toHaveBeenCalledTimes(2)
+    expect(console.error).toHaveBeenCalledTimes(2)
+
+    await vi.advanceTimersByTimeAsync(59_999)
+    const blocked = await appointments()
+    expect(blocked.status).toBe(502)
+    expect(JSON.parse(await blocked.text())).toMatchObject({
+      error: 'Open times could not be loaded.',
+      officialCalendar,
+    })
+    expect(schedulerFetch).toHaveBeenCalledTimes(2)
+    expect(console.error).toHaveBeenCalledTimes(2)
+    const toolResponse = await rpc('tools/call', {
+      name: 'find_appointments',
+      arguments: {},
+    })
+    expect(toolResponse.status).toBe(200)
+    expect(JSON.parse(await toolResponse.text())).toMatchObject({
+      result: { isError: true },
+    })
+    expect(schedulerFetch).toHaveBeenCalledTimes(2)
+    expect(console.error).toHaveBeenCalledTimes(2)
+
+    await vi.advanceTimersByTimeAsync(1)
+    expect((await appointments()).status).toBe(502)
+    await vi.advanceTimersByTimeAsync(0)
+    expect(schedulerFetch).toHaveBeenCalledTimes(4)
+    expect(console.error).toHaveBeenCalledTimes(4)
+
+    await vi.advanceTimersByTimeAsync(119_999)
+    expect((await appointments()).status).toBe(502)
+    expect(schedulerFetch).toHaveBeenCalledTimes(4)
+    expect(console.error).toHaveBeenCalledTimes(4)
+
+    scheduler.office = 'slots'
+    scheduler.exam = 'slots'
+    await vi.advanceTimersByTimeAsync(1)
+    const recovered = await appointments()
+    expect(recovered.status).toBe(200)
+    const recoveredData = JSON.parse(await recovered.text())
+    expect(recoveredData).toMatchObject({
+      status: 'open',
+      checkedAt: new Date(now.getTime() + 180_000).toISOString(),
+      totalMatches: 16,
+      otherVisit: { status: 'open' },
+    })
+    const requests = schedulerFetch.mock.calls.length
+    expect(requests).toBeGreaterThan(4)
+
+    scheduler.office = 'failed'
+    scheduler.exam = 'failed'
+    await vi.advanceTimersByTimeAsync(120_000)
+    const stale = await appointments()
+    expect(stale.status).toBe(200)
+    expect(JSON.parse(await stale.text())).toEqual(recoveredData)
+    await vi.advanceTimersByTimeAsync(0)
+    expect(schedulerFetch).toHaveBeenCalledTimes(requests + 2)
+    expect(console.error).toHaveBeenCalledTimes(6)
+
+    await vi.advanceTimersByTimeAsync(59_999)
+    expect((await appointments()).status).toBe(200)
+    expect(schedulerFetch).toHaveBeenCalledTimes(requests + 2)
+
+    scheduler.office = 'slots'
+    scheduler.exam = 'slots'
+    await vi.advanceTimersByTimeAsync(1)
+    expect((await appointments()).status).toBe(200)
+    await vi.advanceTimersByTimeAsync(0)
+    expect(schedulerFetch.mock.calls.length).toBeGreaterThan(requests + 2)
+    const refreshed = await appointments()
+    expect(refreshed.status).toBe(200)
+    expect(JSON.parse(await refreshed.text())).toMatchObject({
+      status: 'open',
+      checkedAt: new Date(now.getTime() + 360_000).toISOString(),
+      totalMatches: 16,
+    })
+    expect(console.error).toHaveBeenCalledTimes(6)
+  })
+
+  it('caps backoff at 15 minutes without blocking the other visit', async () => {
+    scheduler.office = 'failed'
+    scheduler.exam = 'empty'
+    const officeRequests = () =>
+      schedulerFetch.mock.calls.filter(([input]) =>
+        String(input).includes('reason_id=56487'),
+      ).length
+    expect((await appointments('?visit=exam')).status).toBe(200)
+    let attempts = 1
+
+    for (const delay of [60_000, 120_000, 240_000, 480_000, 900_000, 900_000]) {
+      await vi.advanceTimersByTimeAsync(delay - 1)
+      const blocked = await appointments('?visit=exam')
+      expect(blocked.status).toBe(200)
+      expect(JSON.parse(await blocked.text())).toMatchObject({
+        visit: 'full-body-exam',
+        status: 'call-to-schedule',
+        otherVisit: { status: 'unknown' },
+      })
+      expect(officeRequests()).toBe(attempts)
+      expect(console.error).toHaveBeenCalledTimes(attempts)
+
+      await vi.advanceTimersByTimeAsync(1)
+      expect((await appointments('?visit=exam')).status).toBe(200)
+      attempts += 1
+      expect(officeRequests()).toBe(attempts)
+      expect(console.error).toHaveBeenCalledTimes(attempts)
+    }
   })
 
   it('returns an error when cached entries have reached the stale limit and refresh fails', async () => {
@@ -631,5 +798,10 @@ describe('availability cache through GET /api/appointments', () => {
       error: 'Open times could not be loaded.',
       officialCalendar,
     })
+    await vi.advanceTimersByTimeAsync(0)
+    const requests = schedulerFetch.mock.calls.length
+    expect((await appointments()).status).toBe(502)
+    expect(schedulerFetch).toHaveBeenCalledTimes(requests)
+    expect(console.error).toHaveBeenCalledTimes(2)
   })
 })
