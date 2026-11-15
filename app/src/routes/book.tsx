@@ -503,6 +503,7 @@ function AvailabilityPanel({
 }) {
   const filtered = hasFilter(filter)
   const [open, setOpen] = useState(filtered)
+  const toggleRef = useRef<HTMLButtonElement>(null)
   return (
     <section
       aria-label="When can you come in?"
@@ -510,6 +511,7 @@ function AvailabilityPanel({
     >
       <div className="flex min-h-13 items-center gap-2 py-2">
         <button
+          ref={toggleRef}
           type="button"
           aria-expanded={open}
           aria-controls="availability-options"
@@ -535,7 +537,10 @@ function AvailabilityPanel({
         {filtered ? (
           <button
             type="button"
-            onClick={() => onChange(noFilter)}
+            onClick={() => {
+              onChange(noFilter)
+              toggleRef.current?.focus()
+            }}
             className="inline-flex min-h-11 shrink-0 items-center gap-1 rounded-md border-l border-rule pr-1 pl-3 text-sm font-semibold text-action hover:underline"
           >
             <RotateCcw aria-hidden="true" className="h-3.5 w-3.5" />
