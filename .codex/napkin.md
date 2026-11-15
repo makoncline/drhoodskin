@@ -14,3 +14,5 @@
 - Dev server: `npx vite dev --port 3000` (from `app/` dir, after `npm install`).
 - Build: `npm run build` from `app/`.
 - Stack: TanStack Start (React 19, Vite 7, Nitro SSR), Tailwind CSS v4, file-based routing.
+- `app/server.ts` is active in the Nitro production server, but the plain Vite dev server does not fully exercise those server-entry routes. For `/.well-known/*`, `Link` headers, and markdown negotiation, verify with `npm run build` + `npm start`.
+- Nitro route matching here should use `new URL(event.req.url, siteCanonical).pathname` instead of `event.path` when query params matter, because `event.path` includes the query string.

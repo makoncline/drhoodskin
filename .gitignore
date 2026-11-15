@@ -1,1 +1,5 @@
 site.static-backup-*
+data/
+.DS_Store
+.playwright-mcp/
+.impeccable/review/

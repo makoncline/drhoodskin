@@ -1,0 +1,408 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-11-14T19:29:28Z",
+  "title": "Design System: Dr. Channing Hood",
+  "extensions": {
+    "colorMeta": {
+      "paper": {
+        "role": "neutral",
+        "displayName": "Porcelain Paper",
+        "tonalRamp": [
+          "oklch(15.00% 0.00453 78.30)",
+          "oklch(26.43% 0.00453 78.30)",
+          "oklch(37.86% 0.00453 78.30)",
+          "oklch(49.29% 0.00453 78.30)",
+          "oklch(60.71% 0.00453 78.30)",
+          "oklch(72.14% 0.00453 78.30)",
+          "oklch(83.57% 0.00453 78.30)",
+          "oklch(95.00% 0.00453 78.30)"
+        ]
+      },
+      "stone": {
+        "role": "neutral",
+        "displayName": "Warm Stone",
+        "tonalRamp": [
+          "oklch(15.00% 0.01085 76.60)",
+          "oklch(26.43% 0.01085 76.60)",
+          "oklch(37.86% 0.01085 76.60)",
+          "oklch(49.29% 0.01085 76.60)",
+          "oklch(60.71% 0.01085 76.60)",
+          "oklch(72.14% 0.01085 76.60)",
+          "oklch(83.57% 0.01085 76.60)",
+          "oklch(95.00% 0.01085 76.60)"
+        ]
+      },
+      "card": {
+        "role": "neutral",
+        "displayName": "Card White",
+        "tonalRamp": [
+          "oklch(15.00% 0.00000 0.00)",
+          "oklch(26.43% 0.00000 0.00)",
+          "oklch(37.86% 0.00000 0.00)",
+          "oklch(49.29% 0.00000 0.00)",
+          "oklch(60.71% 0.00000 0.00)",
+          "oklch(72.14% 0.00000 0.00)",
+          "oklch(83.57% 0.00000 0.00)",
+          "oklch(95.00% 0.00000 0.00)"
+        ]
+      },
+      "ink": {
+        "role": "neutral",
+        "displayName": "Slate Ink",
+        "tonalRamp": [
+          "oklch(15.00% 0.01481 226.71)",
+          "oklch(26.43% 0.01481 226.71)",
+          "oklch(37.86% 0.01481 226.71)",
+          "oklch(49.29% 0.01481 226.71)",
+          "oklch(60.71% 0.01481 226.71)",
+          "oklch(72.14% 0.01481 226.71)",
+          "oklch(83.57% 0.01481 226.71)",
+          "oklch(95.00% 0.01481 226.71)"
+        ]
+      },
+      "ink-muted": {
+        "role": "neutral",
+        "displayName": "Quiet Slate",
+        "tonalRamp": [
+          "oklch(15.00% 0.01961 237.05)",
+          "oklch(26.43% 0.01961 237.05)",
+          "oklch(37.86% 0.01961 237.05)",
+          "oklch(49.29% 0.01961 237.05)",
+          "oklch(60.71% 0.01961 237.05)",
+          "oklch(72.14% 0.01961 237.05)",
+          "oklch(83.57% 0.01961 237.05)",
+          "oklch(95.00% 0.01961 237.05)"
+        ]
+      },
+      "rule": {
+        "role": "neutral",
+        "displayName": "Stone Rule",
+        "tonalRamp": [
+          "oklch(15.00% 0.01561 77.06)",
+          "oklch(26.43% 0.01561 77.06)",
+          "oklch(37.86% 0.01561 77.06)",
+          "oklch(49.29% 0.01561 77.06)",
+          "oklch(60.71% 0.01561 77.06)",
+          "oklch(72.14% 0.01561 77.06)",
+          "oklch(83.57% 0.01561 77.06)",
+          "oklch(95.00% 0.01561 77.06)"
+        ]
+      },
+      "frame": {
+        "role": "neutral",
+        "displayName": "Gallery Frame",
+        "tonalRamp": [
+          "oklch(15.00% 0.00799 223.72)",
+          "oklch(26.43% 0.00799 223.72)",
+          "oklch(37.86% 0.00799 223.72)",
+          "oklch(49.29% 0.00799 223.72)",
+          "oklch(60.71% 0.00799 223.72)",
+          "oklch(72.14% 0.00799 223.72)",
+          "oklch(83.57% 0.00799 223.72)",
+          "oklch(95.00% 0.00799 223.72)"
+        ]
+      },
+      "action": {
+        "role": "primary",
+        "displayName": "Blue-Slate Action",
+        "tonalRamp": [
+          "oklch(15.00% 0.05058 235.46)",
+          "oklch(26.43% 0.05058 235.46)",
+          "oklch(37.86% 0.05058 235.46)",
+          "oklch(49.29% 0.05058 235.46)",
+          "oklch(60.71% 0.05058 235.46)",
+          "oklch(72.14% 0.05058 235.46)",
+          "oklch(83.57% 0.05058 235.46)",
+          "oklch(95.00% 0.05058 235.46)"
+        ]
+      },
+      "action-hover": {
+        "role": "primary",
+        "displayName": "Deep Blue-Slate Hover",
+        "tonalRamp": [
+          "oklch(15.00% 0.04073 233.71)",
+          "oklch(26.43% 0.04073 233.71)",
+          "oklch(37.86% 0.04073 233.71)",
+          "oklch(49.29% 0.04073 233.71)",
+          "oklch(60.71% 0.04073 233.71)",
+          "oklch(72.14% 0.04073 233.71)",
+          "oklch(83.57% 0.04073 233.71)",
+          "oklch(95.00% 0.04073 233.71)"
+        ]
+      },
+      "action-tint": {
+        "role": "primary",
+        "displayName": "Pale Blue-Slate Tint",
+        "tonalRamp": [
+          "oklch(15.00% 0.01105 225.98)",
+          "oklch(26.43% 0.01105 225.98)",
+          "oklch(37.86% 0.01105 225.98)",
+          "oklch(49.29% 0.01105 225.98)",
+          "oklch(60.71% 0.01105 225.98)",
+          "oklch(72.14% 0.01105 225.98)",
+          "oklch(83.57% 0.01105 225.98)",
+          "oklch(95.00% 0.01105 225.98)"
+        ]
+      },
+      "night": {
+        "role": "neutral",
+        "displayName": "Night Slate",
+        "tonalRamp": [
+          "oklch(15.00% 0.01367 229.58)",
+          "oklch(26.43% 0.01367 229.58)",
+          "oklch(37.86% 0.01367 229.58)",
+          "oklch(49.29% 0.01367 229.58)",
+          "oklch(60.71% 0.01367 229.58)",
+          "oklch(72.14% 0.01367 229.58)",
+          "oklch(83.57% 0.01367 229.58)",
+          "oklch(95.00% 0.01367 229.58)"
+        ]
+      },
+      "night-muted": {
+        "role": "neutral",
+        "displayName": "Quiet Night Lettering",
+        "tonalRamp": [
+          "oklch(15.00% 0.01146 226.02)",
+          "oklch(26.43% 0.01146 226.02)",
+          "oklch(37.86% 0.01146 226.02)",
+          "oklch(49.29% 0.01146 226.02)",
+          "oklch(60.71% 0.01146 226.02)",
+          "oklch(72.14% 0.01146 226.02)",
+          "oklch(83.57% 0.01146 226.02)",
+          "oklch(95.00% 0.01146 226.02)"
+        ]
+      },
+      "secondary-border": {
+        "role": "neutral",
+        "displayName": "Stone Button Border",
+        "tonalRamp": [
+          "oklch(15.00% 0.01884 78.22)",
+          "oklch(26.43% 0.01884 78.22)",
+          "oklch(37.86% 0.01884 78.22)",
+          "oklch(49.29% 0.01884 78.22)",
+          "oklch(60.71% 0.01884 78.22)",
+          "oklch(72.14% 0.01884 78.22)",
+          "oklch(83.57% 0.01884 78.22)",
+          "oklch(95.00% 0.01884 78.22)"
+        ]
+      }
+    },
+    "typographyMeta": {
+      "display": {
+        "displayName": "Physician Name",
+        "purpose": "Fluid mixed-case Marcellus name on paper, not a plate."
+      },
+      "headline": {
+        "displayName": "Section Heading",
+        "purpose": "Fluid mixed-case Marcellus headings with slightly tight tracking."
+      },
+      "title": {
+        "displayName": "Appointment Title",
+        "purpose": "Regular Marcellus card title; grows to 1.6rem at 40rem."
+      },
+      "body": {
+        "displayName": "Reading Text",
+        "purpose": "Source Sans 3 reading text; relaxed paragraphs use line-height 1.625."
+      },
+      "label": {
+        "displayName": "Supporting Text",
+        "purpose": "Captions and source lines, with selected identifying words emphasized."
+      },
+      "control": {
+        "displayName": "Action Label",
+        "purpose": "Semibold Source Sans 3 controls; compact header labels use 0.95rem."
+      }
+    },
+    "shadows": [
+      {
+        "name": "gallery-frame",
+        "value": "0 1px 2px rgb(28 37 41 / 0.12), 0 18px 32px -20px rgb(28 37 41 / 0.45)",
+        "purpose": "Soft depth below thin near-black gallery edges."
+      },
+      {
+        "name": "mat-edge",
+        "value": "inset 0 0 0 1px #ebe6df",
+        "purpose": "Fine warm-neutral edge inside white portrait and credential mats."
+      },
+      {
+        "name": "appointment-card",
+        "value": "0 1px 2px rgb(28 37 41 / 0.06), 0 24px 48px -28px rgb(28 37 41 / 0.35)",
+        "purpose": "White appointment cards on light neutral grounds."
+      },
+      {
+        "name": "mobile-action-bar",
+        "value": "0 -8px 24px -16px rgb(28 37 41 / 0.35)",
+        "purpose": "Light bottom action bar above page content."
+      },
+      {
+        "name": "portrait-settle-start",
+        "value": "0 1px 2px rgb(28 37 41 / 0.06), 0 6px 12px -10px rgb(28 37 41 / 0.2)",
+        "purpose": "Starting portrait shadow only; not a resting elevation."
+      }
+    ],
+    "motion": [
+      {
+        "name": "action-state",
+        "value": "160ms ease-out",
+        "purpose": "Primary background and press movement; secondary border and background; link underline color."
+      },
+      {
+        "name": "primary-press",
+        "value": "translateY(1px)",
+        "purpose": "Primary control while pressed."
+      },
+      {
+        "name": "portrait-settle",
+        "value": "900ms cubic-bezier(0.16, 1, 0.3, 1) both",
+        "purpose": "Single entrance from translateY(14px) and a smaller shadow to the visible default. Runs only within prefers-reduced-motion: no-preference."
+      },
+      {
+        "name": "utility-state",
+        "value": "150ms cubic-bezier(0.4, 0, 0.2, 1)",
+        "purpose": "Tailwind default transitions for navigation color, arrow movement, and disclosure chevrons; not staged entrances."
+      },
+      {
+        "name": "mobile-bar",
+        "value": "transform 300ms cubic-bezier(0, 0, 0.2, 1)",
+        "purpose": "Move the mobile bar between translateY(0) and translateY(100%) as appointment cards enter or leave the viewport. The transition is removed when reduced motion is requested."
+      }
+    ],
+    "breakpoints": [
+      {
+        "name": "sm",
+        "value": "40rem"
+      },
+      {
+        "name": "md",
+        "value": "48rem"
+      },
+      {
+        "name": "lg",
+        "value": "64rem"
+      }
+    ]
+  },
+  "components": [
+    {
+      "name": "Primary Action",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "Blue-slate booking action with white text, darker hover, and one-pixel press movement. No shadow.",
+      "html": "<a class=\"ds-primary\" href=\"#appointment\">See open times <svg width=\"18\" height=\"18\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"M7 7h10v10M7 17 17 7\"/></svg></a>",
+      "css": ".ds-primary{display:inline-flex;align-items:center;justify-content:center;gap:.5rem;min-height:3rem;padding:.7rem 1.4rem;border-radius:10px;background:var(--color-action);color:var(--color-card);font-family:var(--font-sans);font-size:1.125rem;font-weight:600;line-height:1.6;text-decoration:none;transition:background-color 160ms ease-out,transform 160ms ease-out}.ds-primary:hover{background:var(--color-action-hover)}.ds-primary:active{transform:translateY(1px)}.ds-primary:focus-visible{outline:2px solid var(--color-action);outline-offset:3px;border-radius:6px}"
+    },
+    {
+      "name": "Secondary Action",
+      "kind": "button",
+      "refersTo": "button-secondary",
+      "description": "White alternative with a stone border; hover adds a pale action tint and action border.",
+      "html": "<a class=\"ds-secondary\" href=\"#appointment\">Request a callback <svg width=\"18\" height=\"18\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"M7 7h10v10M7 17 17 7\"/></svg></a>",
+      "css": ".ds-secondary{display:inline-flex;align-items:center;justify-content:center;gap:.5rem;min-height:3rem;padding:.7rem 1.4rem;border:1px solid #c9c1b5;border-radius:10px;background:var(--color-card);color:var(--color-ink);font-family:var(--font-sans);font-size:1.125rem;font-weight:600;line-height:1.6;text-decoration:none;transition:border-color 160ms ease-out,background-color 160ms ease-out}.ds-secondary:hover{border-color:var(--color-action);background:var(--color-action-tint)}.ds-secondary:focus-visible{outline:2px solid var(--color-action);outline-offset:3px;border-radius:6px}"
+    },
+    {
+      "name": "Text Link and Footer Link",
+      "kind": "custom",
+      "refersTo": "text-link",
+      "description": "Underlined action text on light surfaces and white links with white focus on the dark footer.",
+      "html": "<div class=\"ds-link-light\"><a class=\"ds-link\" href=\"#visit\">Office information</a></div><div class=\"ds-link-dark\"><a class=\"ds-footer-link\" href=\"#appointment\">Dr. Hood’s open times</a></div>",
+      "css": ".ds-link-light,.ds-link-dark{padding:1rem;font-family:var(--font-sans);font-size:1.125rem;line-height:1.6}.ds-link-light{background:var(--color-paper)}.ds-link-dark{background:var(--color-night)}.ds-link,.ds-footer-link{font-weight:600;text-decoration:underline;text-decoration-thickness:1px;text-underline-offset:.2em}.ds-link{color:var(--color-action);text-decoration-color:color-mix(in srgb,currentColor 35%,transparent);transition:text-decoration-color 160ms ease-out}.ds-link:hover{ text-decoration-color:currentColor}.ds-footer-link{color:var(--color-card);text-decoration-color:rgb(255 255 255 / .4)}.ds-footer-link:hover{text-decoration-color:var(--color-card)}.ds-link:focus-visible,.ds-footer-link:focus-visible{outline:2px solid var(--color-action);outline-offset:3px;border-radius:6px}.ds-footer-link:focus-visible{outline-color:var(--color-card)}"
+    },
+    {
+      "name": "Appointment Card",
+      "kind": "card",
+      "refersTo": "appointment-card",
+      "description": "White card with a mixed-case title, primary booking row, and ruled secondary alternatives. Controls stack below 40rem.",
+      "html": "<section class=\"ds-appointment\" aria-labelledby=\"ds-appointment-title\"><h2 id=\"ds-appointment-title\" class=\"ds-appointment-title\">Book with Dr. Hood</h2><div class=\"ds-appointment-main\"><a class=\"ds-card-primary\" href=\"#appointment\">See open times</a><p class=\"ds-card-copy\"><strong>Book a specific time.</strong> Pick a visit reason and an open time.</p></div><div class=\"ds-card-alternatives\"><div><a class=\"ds-card-secondary\" href=\"#appointment\">Request a callback</a><p class=\"ds-card-copy ds-card-note\"><strong>Does not book a time.</strong> Choose Dr. Hood as your provider.</p></div><div><a class=\"ds-card-secondary\" href=\"tel:+17206040602\">Call (720) 604-0602</a><p class=\"ds-card-copy ds-card-note ds-card-status\"><span class=\"ds-card-dot\" aria-hidden=\"true\"></span><span><strong>Office closed now.</strong> Check office hours.</span></p></div></div></section>",
+      "css": ".ds-appointment{--focus-ring:var(--color-action);padding:1rem;border-radius:16px;background:var(--color-card);color:var(--color-ink);font-family:var(--font-sans);font-size:1.125rem;line-height:1.6;box-shadow:0 1px 2px rgb(28 37 41 / .06),0 24px 48px -28px rgb(28 37 41 / .35)}.ds-appointment-title{margin:0;font-family:var(--font-display);font-size:1.45rem;font-weight:400;line-height:1.25;text-wrap:balance}.ds-appointment-main{display:grid;gap:.5rem;margin-top:.75rem}.ds-card-primary,.ds-card-secondary{display:flex;align-items:center;justify-content:center;gap:.5rem;min-height:3rem;padding:.7rem 1.4rem;border-radius:10px;font-size:1.125rem;font-weight:600;line-height:1.6;text-decoration:none}.ds-card-primary{padding-inline:1.5rem;background:var(--color-action);color:var(--color-card);transition:background-color 160ms ease-out,transform 160ms ease-out}.ds-card-primary:hover{background:var(--color-action-hover)}.ds-card-primary:active{transform:translateY(1px)}.ds-card-secondary{border:1px solid #c9c1b5;background:var(--color-card);color:var(--color-ink);transition:border-color 160ms ease-out,background-color 160ms ease-out}.ds-card-secondary:hover{border-color:var(--color-action);background:var(--color-action-tint)}.ds-card-primary:focus-visible,.ds-card-secondary:focus-visible{outline:2px solid var(--focus-ring);outline-offset:3px;border-radius:6px}.ds-card-copy{margin:0;font-size:.98rem;line-height:1.375;color:var(--color-ink-muted)}.ds-card-copy strong{font-weight:700;color:var(--color-ink)}.ds-card-alternatives{display:grid;gap:1rem;margin-top:1rem;padding-top:1rem;border-top:1px solid var(--color-rule)}.ds-card-note{margin-top:.5rem}.ds-card-status{display:flex;align-items:center;gap:.5rem}.ds-card-status strong{color:inherit}.ds-card-dot{display:inline-block;width:.625rem;height:.625rem;flex-shrink:0;border-radius:9999px;background:currentColor;opacity:.6}@media(min-width:40rem){.ds-appointment{padding:1.75rem}.ds-appointment-title{font-size:1.6rem}.ds-appointment-main{grid-template-columns:auto minmax(0,1fr);align-items:center;gap:1.25rem;margin-top:1rem}.ds-appointment-main>.ds-card-copy{font-size:1.02rem}.ds-card-alternatives{grid-template-columns:repeat(2,minmax(0,1fr));gap:1.5rem;margin-top:1.5rem;padding-top:1.25rem}}"
+    },
+    {
+      "name": "Gallery Credential Frame",
+      "kind": "card",
+      "refersTo": "frame",
+      "description": "Square near-black edge, white mat, fine neutral inset edge, and centered mixed-case Marcellus inscription.",
+      "html": "<div class=\"ds-frame\"><div class=\"ds-frame-mat\"><p class=\"ds-inscription\">New York Medical College</p><p class=\"ds-frame-caption\">Dermatology residency. Chief resident in her final year.</p></div></div>",
+      "css": ".ds-frame{padding:6px;background:var(--color-frame);box-shadow:0 1px 2px rgb(28 37 41 / .12),0 18px 32px -20px rgb(28 37 41 / .45)}.ds-frame-mat{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:3.5rem 1rem;background:var(--color-card);color:var(--color-ink);text-align:center;box-shadow:inset 0 0 0 1px #ebe6df}.ds-inscription{margin:0;font-family:var(--font-display);font-size:1.5rem;font-weight:400;line-height:1.25;text-wrap:balance}.ds-frame-caption{margin:.5rem 0 0;font-family:var(--font-sans);font-size:.95rem;line-height:1.375;color:var(--color-ink-muted)}@media(min-width:48rem){.ds-frame-mat{padding-block:5rem}.ds-inscription{font-size:2rem}}"
+    },
+    {
+      "name": "Light Navigation",
+      "kind": "nav",
+      "description": "Paper header with a stone rule, mixed-case identity, rounded phone hit area, and action-colored focus.",
+      "html": "<header class=\"ds-header\"><div class=\"ds-header-shell\"><a class=\"ds-brand\" href=\"#top\"><span class=\"ds-brand-name\">Dr. Channing Hood</span><span class=\"ds-brand-detail\">Dermatology · Golden, Colorado</span></a><nav class=\"ds-nav\" aria-label=\"Primary\"><a class=\"ds-nav-call\" href=\"tel:+17206040602\" aria-label=\"Call the Golden office, (720) 604-0602\"><svg width=\"16\" height=\"16\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.12.96.35 1.9.69 2.79a2 2 0 0 1-.45 2.11L8.09 9.89a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.9.34 1.83.57 2.79.69A2 2 0 0 1 22 16.92z\"/></svg><span class=\"ds-phone-label\">(720) 604-0602</span></a></nav></div></header>",
+      "css": ".ds-header{background:color-mix(in oklab,var(--color-paper) 90%,transparent);color:var(--color-ink);border-bottom:1px solid var(--color-rule);backdrop-filter:blur(12px);font-family:var(--font-sans);font-size:1.125rem;line-height:1.6}.ds-header-shell{display:flex;align-items:center;justify-content:space-between;gap:1rem;min-height:4rem;width:min(72rem,calc(100% - 2.5rem));margin-inline:auto;padding-block:.625rem}.ds-brand{display:flex;flex-direction:column;color:inherit;line-height:1.25;text-decoration:none}.ds-brand-name{font-family:var(--font-display);font-size:1.125rem}.ds-brand-detail{font-size:.875rem;color:var(--color-ink-muted)}.ds-nav{display:flex;align-items:center;gap:.5rem}.ds-nav-call{display:inline-flex;align-items:center;justify-content:center;gap:.5rem;min-height:2.75rem;min-width:2.75rem;padding-inline:.75rem;border-radius:8px;color:inherit;font-size:.95rem;font-weight:600;text-decoration:none;transition:color 150ms cubic-bezier(.4,0,.2,1),background-color 150ms cubic-bezier(.4,0,.2,1)}.ds-nav-call:hover{background:var(--color-stone)}.ds-brand:focus-visible,.ds-nav-call:focus-visible{outline:2px solid var(--color-action);outline-offset:3px;border-radius:6px}.ds-phone-label{display:none}@media(min-width:40rem){.ds-phone-label{display:inline}.ds-nav{gap:.75rem}}"
+    },
+    {
+      "name": "Ruled Disclosure",
+      "kind": "custom",
+      "description": "Native disclosure with semibold reading text, stone rules, quiet answer text, and a rotating stroke chevron.",
+      "html": "<details class=\"ds-disclosure\"><summary class=\"ds-summary\">Questions patients ask<svg class=\"ds-chevron\" width=\"20\" height=\"20\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"m6 9 6 6 6-6\"/></svg></summary><p class=\"ds-answer\">Supporting information uses quiet slate below the clear question label.</p></details>",
+      "css": ".ds-disclosure{border-top:1px solid var(--color-rule);border-bottom:1px solid var(--color-rule);background:var(--color-paper);color:var(--color-ink);font-family:var(--font-sans);font-size:1.125rem;line-height:1.6}.ds-summary{display:flex;align-items:center;justify-content:space-between;gap:1rem;min-height:3.5rem;padding:1rem 0;list-style:none;cursor:pointer;font-size:1.125rem;font-weight:600;line-height:1.75rem}.ds-summary::-webkit-details-marker{display:none}.ds-summary:focus-visible{outline:2px solid var(--color-action);outline-offset:3px;border-radius:6px}.ds-chevron{flex-shrink:0;color:var(--color-ink-muted);transition:transform 150ms cubic-bezier(.4,0,.2,1)}.ds-disclosure[open]>.ds-summary>.ds-chevron{transform:rotate(180deg)}.ds-answer{max-width:65ch;margin:0 0 1.25rem;color:var(--color-ink-muted);line-height:1.625}"
+    },
+    {
+      "name": "Office Status",
+      "kind": "custom",
+      "refersTo": "office-status-open",
+      "description": "Static samples of open, closed, and initial states. Live application text supplies actual hours and updates each minute.",
+      "html": "<div class=\"ds-status-list\"><p class=\"ds-status\"><span class=\"ds-status-dot ds-status-open\" aria-hidden=\"true\"></span><span><strong>Office open now</strong> until the listed closing time, Mountain Time</span></p><p class=\"ds-status\"><span class=\"ds-status-dot ds-status-closed\" aria-hidden=\"true\"></span><span><strong>Office closed now.</strong> Opens at the next listed time</span></p><p class=\"ds-status\"><span class=\"ds-status-dot ds-status-initial\" aria-hidden=\"true\"></span><span>Office hours: see the weekly schedule</span></p></div>",
+      "css": ".ds-status-list{display:grid;gap:.75rem;padding:1rem;background:var(--color-card);font-family:var(--font-sans);font-size:.98rem;line-height:1.375;color:var(--color-ink-muted)}.ds-status{display:flex;align-items:center;gap:.5rem;margin:0}.ds-status strong{font-weight:700}.ds-status-dot{display:inline-block;flex-shrink:0;width:.625rem;height:.625rem;border-radius:9999px;background:currentColor}.ds-status-open{background:var(--color-action)}.ds-status-closed{opacity:.6}.ds-status-initial{opacity:.4}"
+    },
+    {
+      "name": "Current-Day Hours Row",
+      "kind": "custom",
+      "refersTo": "hours-today",
+      "description": "Pale action tint and a text Today label mark the current day without adding a badge or new accent.",
+      "html": "<table class=\"ds-hours\"><caption class=\"ds-hours-caption\">Office hours · example rows</caption><tbody><tr class=\"ds-hours-row\"><th scope=\"row\">Monday</th><td>8:00 AM – 4:30 PM</td></tr><tr class=\"ds-hours-row ds-hours-today\" aria-current=\"date\"><th scope=\"row\">Tuesday<span class=\"ds-today-label\">Today</span></th><td>8:00 AM – 4:30 PM</td></tr></tbody></table>",
+      "css": ".ds-hours{width:100%;max-width:28rem;border-collapse:collapse;background:var(--color-paper);color:var(--color-ink);font-family:var(--font-sans);font-size:1.125rem;line-height:1.6;text-align:left;font-variant-numeric:tabular-nums}.ds-hours-caption{text-align:left;font-size:.95rem;color:var(--color-ink-muted);padding-bottom:.5rem}.ds-hours-row{border-top:1px solid var(--color-rule)}.ds-hours th{padding:.625rem 0 .625rem .5rem;font-weight:600}.ds-hours td{padding:.625rem .5rem .625rem 0;text-align:right}.ds-hours-today{background:var(--color-action-tint)}.ds-today-label{margin-left:.5rem;font-size:.875rem;line-height:1.25rem;color:var(--color-action)}"
+    }
+  ],
+  "narrative": {
+    "northStar": "The Porcelain Gallery",
+    "overview": "The system presents a premium dermatology practice through warm, light surfaces and clear clinical information. Porcelain paper is the main ground. Warm stone bands separate groups. White appointment cards and near-black gallery frames give actions and evidence distinct forms. This follows the owner's direction recorded on 2026-11-14: refined, warm, professional, and still clinical.\n\nMarcellus gives the physician's name and headings a quiet, formal character. Source Sans 3 keeps reading and controls clear. One blue-slate action family connects booking, links, current-day emphasis, and open-office status. The portrait's sky blue remains part of the photograph, not a second interface accent. **Owner decision: no green or brass palette.** This system replaces the rejected green-and-brass design; none of its plates, lettering rules, or color roles remain normative.",
+    "keyCharacteristics": [
+      "Porcelain paper, warm stone bands, white cards, and slate ink.",
+      "One blue-slate action family with a darker hover and pale state tint.",
+      "Mixed-case Marcellus names and headings; Source Sans 3 reading and controls.",
+      "Thin, square gallery frames with white credential and portrait mats.",
+      "One portrait entrance, with a visible static state when reduced motion is requested."
+    ],
+    "rules": [
+      {
+        "name": "The One Action Family Rule",
+        "body": "Use blue-slate for actions and useful state. Keep sky blue inside the portrait; do not introduce green or brass interface colors.",
+        "section": "colors"
+      },
+      {
+        "name": "The Surface Focus Rule",
+        "body": "Use the action color for focus on light surfaces and white for focus on the dark footer. Set the focus context on the surface that contains the control.",
+        "section": "colors"
+      },
+      {
+        "name": "The Mixed-Case Reading Rule",
+        "body": "Use mixed-case Marcellus for names and display headings, and Source Sans 3 for reading and controls. Do not add eyebrows, kickers, uppercase plates, or wide inscription tracking.",
+        "section": "typography"
+      },
+      {
+        "name": "The Evidence Frame Rule",
+        "body": "Frame the portrait, credentials, and map with a thin near-black edge. Keep reading lists and appointment cards outside that frame language.",
+        "section": "elevation"
+      }
+    ],
+    "dos": [
+      "Do use porcelain paper and warm stone to group content, with white cards for appointment actions.",
+      "Do use the single blue-slate family for actions, links, current-day emphasis, and open status.",
+      "Do keep Marcellus names and headings in mixed case and use Source Sans 3 for reading and controls.",
+      "Do use thin near-black gallery edges and white mats for the portrait and credentials.",
+      "Do set focus to action on light surfaces and white on the dark footer.",
+      "Do keep the portrait visible when its single entrance is disabled.",
+      "Do retain clear action labels, outcome explanations, native disclosures, and text status."
+    ],
+    "donts": [
+      "Don't restore a green or brass palette; the owner rejected it.",
+      "Don't promote the portrait's sky blue into a second interface accent.",
+      "Don't add eyebrows, kickers, uppercase nameplates, or widely tracked display lettering.",
+      "Don't make secondary controls dark, transparent, or pill-shaped at rest.",
+      "Don't turn every reading group into a floating card or an identical gallery frame.",
+      "Don't add staged entrances beyond the portrait's single settle.",
+      "Don't replace stroke SVGs with glyph icons or communicate office state by color alone."
+    ]
+  }
+}

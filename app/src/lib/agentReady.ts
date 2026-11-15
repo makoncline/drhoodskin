@@ -25,8 +25,10 @@ export const agentPaths = {
   services: '/api/services',
   faq: '/api/faq',
   booking: '/api/booking',
+  appointments: '/api/appointments',
   search: '/api/search',
   sitemap: '/sitemap.xml',
+  llmsTxt: '/llms.txt',
 } as const
 
 function absoluteUrl(pathname: string) {
@@ -47,17 +49,19 @@ function escapeXml(value: string) {
 }
 
 function normalize(value: string) {
-  return value.toLowerCase().replaceAll(/[^a-z0-9]+/g, ' ').trim()
+  return value
+    .toLowerCase()
+    .replaceAll(/[^a-z0-9]+/g, ' ')
+    .trim()
 }
 
 function tokenize(value: string) {
-  return normalize(value)
-    .split(' ')
-    .filter(Boolean)
+  return normalize(value).split(' ').filter(Boolean)
 }
 
 function sourceRef(
-  key: keyof typeof content.officialSources | keyof typeof content.externalSources,
+  key:
+    keyof typeof content.officialSources | keyof typeof content.externalSources,
 ) {
   if (key in content.officialSources) {
     const officialKey = key as keyof typeof content.officialSources
@@ -113,10 +117,7 @@ function summarizeHours() {
 
 function formatFaq() {
   return faqEntries
-    .map(
-      (item) =>
-        `## ${item.question}\n\n${item.answer}`,
-    )
+    .map((item) => `## ${item.question}\n\n${item.answer}`)
     .join('\n\n')
 }
 
@@ -309,6 +310,7 @@ export const apiIndexPayload = {
     services: agentPaths.services,
     faq: agentPaths.faq,
     booking: agentPaths.booking,
+    appointments: agentPaths.appointments,
     search: agentPaths.search,
     openApi: agentPaths.openApi,
     apiCatalog: agentPaths.apiCatalog,
@@ -317,6 +319,7 @@ export const apiIndexPayload = {
     mcpEndpoint: agentPaths.mcpEndpoint,
   },
   queryExamples: {
+    appointments: `${agentPaths.appointments}?days=mon,fri&times=early-morning,late-afternoon&avoid=09:00-17:00`,
     faq: `${agentPaths.faq}?question=accepting+new+patients`,
     search: `${agentPaths.search}?q=eczema`,
     services: `${agentPaths.services}?category=medical`,
@@ -337,7 +340,8 @@ ${content.identity.title} providing dermatology care in Golden, Colorado through
 ## Fast facts
 
 - Accepting new patients: ${yesNo(content.identity.acceptingNewPatients)}
-- Booking: ${content.booking.href}
+- Book a specific time with Dr. Hood: ${content.booking.href}
+- Request a callback (does not book a time): ${content.booking.callbackHref}
 - Phone: ${content.office.phoneDisplay}
 - Address: ${content.office.address1}, ${content.office.city}, ${content.office.state} ${content.office.zip}
 - Official provider page: ${content.officialSources.provider}
@@ -376,6 +380,37 @@ ${formatFaq()}
 - Insurance information: ${content.officialSources.insurance}
 `
 
+export const llmsTxt = `# ${content.identity.name}
+
+> ${content.identity.title} in ${content.office.city}, Colorado, at ${content.office.name}. ${content.identity.fellowship}. Accepting new patients: ${yesNo(content.identity.acceptingNewPatients)}.
+
+Facts on this site come from official U.S. Dermatology Partners pages and are reviewed by date. Appointments are confirmed only on the official scheduling pages below.
+
+## Book
+
+- [Choose an open time with Dr. Hood](${content.booking.href}): books a specific time on the U.S. Dermatology Partners scheduling site.
+- [Request a callback](${content.booking.callbackHref}): sends a request; the office calls back. Does not book a time.
+- [Find times that fit](${absoluteUrl(agentPaths.appointments)}?days=mon,fri&times=early-morning,late-afternoon&avoid=09:00-17:00): live openings grouped by date, filtered by weekday (\`mon\`–\`sun\`), time band (\`early-morning\`, \`late-morning\`, \`early-afternoon\`, \`late-afternoon\`), and busy ranges in Mountain Time (\`avoid=09:00-17:00\`, comma-separated). Also the MCP tool \`find_appointments\`, with \`avoid\` as an array of strings. Busy ranges exclude starts in [from, to); malformed ranges are ignored. \`limit\` counts days (default 5, maximum 20). Returns booking links, total matching times and days, the unfiltered soonest opening, observed hours from loaded openings, and the other visit type's unfiltered availability.
+- A full-body skin exam needs a full-body slot (\`visit=full-body-exam\`). Never offer an office-visit time for a full-body exam. An office visit (\`visit=office\`, the default) is for a specific concern. Confirm the visit type and time with the patient. Give booking links to the patient; do not open them.
+- Phone: ${content.office.phoneDisplay} (${content.office.address1}, ${content.office.city}, ${content.office.state} ${content.office.zip})
+
+## Facts
+
+- [Profile](${absoluteUrl(agentPaths.profile)}): name, credentials, training
+- [Office](${absoluteUrl(agentPaths.office)}): address, hours, directions
+- [Booking](${absoluteUrl(agentPaths.booking)}): booking paths, forms, insurance
+- [FAQ](${absoluteUrl(agentPaths.faq)})
+
+## For agents
+
+- [Agent guide](${absoluteUrl(agentPaths.agentGuide)})
+- [OpenAPI](${absoluteUrl(agentPaths.openApi)})
+- [MCP endpoint](${absoluteUrl(agentPaths.mcpEndpoint)}): read-only tools
+- [Official provider profile](${content.officialSources.provider})
+
+Last reviewed: ${content.meta.lastReviewed}
+`
+
 export const agentGuideMarkdown = `---
 title: Dr Hood Skin Agent Guide
 canonical: ${absoluteUrl(agentPaths.agentGuide)}
@@ -412,12 +447,17 @@ Use this guide when an agent needs trustworthy, read-only facts about Dr. Channi
 - \`${absoluteUrl(agentPaths.services)}\` for medical dermatology and procedures, with optional \`?category=medical\` or \`?category=procedures\`
 - \`${absoluteUrl(agentPaths.faq)}\` for common patient questions, with optional \`?question=...\`
 - \`${absoluteUrl(agentPaths.booking)}\` for booking and first-visit links
+- \`${absoluteUrl(agentPaths.appointments)}?days=mon,fri&times=early-morning,late-afternoon&avoid=09:00-17:00\` for live openings grouped by date, each with its official booking link. Use comma-separated \`avoid\` ranges in Mountain Time (24-hour \`HH:MM-HH:MM\`) to exclude busy starts in [from, to); malformed ranges are ignored. \`limit\` counts days (default 5, maximum 20). The response includes \`days\`, \`totalMatches\`, \`totalDays\`, unfiltered \`soonest\`, \`hours\` derived from loaded openings, and unfiltered \`otherVisit\` availability.
 - \`${absoluteUrl(agentPaths.search)}?q=...\` for simple public-content search across services, FAQ, office, forms, and insurance
 - \`${absoluteUrl(agentPaths.status)}\` for machine health
 
 ## Booking guardrails
 
-- Use the official appointment URL: ${content.booking.href}
+- Use the official scheduling URL, which books a specific time: ${content.booking.href}
+- A full-body skin exam needs a full-body slot (\`visit=full-body-exam\`). Never offer an office-visit time for a full-body exam. An office visit (\`visit=office\`, the default) is for a specific concern.
+- Confirm the visit type and time with the patient. Give booking links to the patient; do not open them. The patient completes booking on the official scheduling page.
+- The other visit type's availability is unfiltered. Do not assume that it fits the patient's schedule or visit needs. Observed hours describe loaded openings, not guaranteed working hours.
+- The official callback request form does not book a time: ${content.booking.callbackHref}
 - Use the clinic phone number for direct human contact: ${content.office.phoneDisplay}
 - Keep insurance and forms guidance tied to the official source URLs already exposed by the site
 - If a user asks for diagnosis, urgency, prescriptions, or individualized treatment advice, stop at public informational facts and direct them to the clinic or a licensed professional.
@@ -425,6 +465,8 @@ Use this guide when an agent needs trustworthy, read-only facts about Dr. Channi
 ## MCP / WebMCP
 
 - The site exposes read-only tools for profile, office, services, FAQ, and booking links.
+- Use \`find_appointments\` for matching dates and times. Pass \`days\` and \`times\` as arrays, and \`avoid\` as an array such as ["09:00-17:00"]. \`limit\` counts days, not times. The response includes unfiltered \`soonest\`, observed \`hours\`, and \`otherVisit\` as well as matching \`days\`, \`totalMatches\`, and \`totalDays\`.
+- The same tools are available at the MCP endpoint and, on the homepage, through WebMCP (\`document.modelContext\`) for agents that run in the browser.
 - These tools should be used to summarize public information, not to provide diagnosis or private patient access.
 `
 
@@ -530,7 +572,8 @@ export const apiCatalogDocument = {
 }
 
 export const mcpServerCard = {
-  $schema: 'https://static.modelcontextprotocol.io/schemas/mcp-server-card/v1.json',
+  $schema:
+    'https://static.modelcontextprotocol.io/schemas/mcp-server-card/v1.json',
   version: '1.0',
   protocolVersion: mcpProtocolVersion,
   serverInfo: {
@@ -691,9 +734,66 @@ export const openApiDocument = {
         },
       },
     },
+    [agentPaths.appointments]: {
+      get: {
+        summary: 'Find open appointment times that fit the patient',
+        description:
+          'Live openings with Dr. Hood from the cached official scheduler, grouped by date. Times and busy ranges use Mountain Time. A full-body skin exam needs a full-body slot; never offer an office-visit time for a full-body exam. An office visit is for a specific concern. Confirm the visit type and time with the patient. Give booking links to the patient; do not open them. The patient completes booking on the official scheduling page.',
+        operationId: 'findAppointments',
+        parameters: [
+          {
+            name: 'visit',
+            in: 'query',
+            description:
+              'Office visit for a specific concern, or full-body skin exam requiring a full-body slot. Never substitute an office-visit time for a full-body exam.',
+            schema: {
+              type: 'string',
+              enum: ['office', 'full-body-exam'],
+              default: 'office',
+            },
+          },
+          {
+            name: 'days',
+            in: 'query',
+            description:
+              'Comma-separated weekdays: mon,tue,wed,thu,fri,sat,sun. Empty means any.',
+            schema: { type: 'string' },
+          },
+          {
+            name: 'times',
+            in: 'query',
+            description:
+              'Comma-separated bands: early-morning (before 10 AM), late-morning (10 AM to noon), early-afternoon (noon to 2 PM), late-afternoon (after 2 PM). Empty means any.',
+            schema: { type: 'string' },
+          },
+          {
+            name: 'avoid',
+            in: 'query',
+            description:
+              'Comma-separated busy ranges in Mountain Time, in 24-hour HH:MM-HH:MM form, such as 09:00-17:00. Excludes starts in [from, to). Malformed, empty, and reversed ranges are ignored.',
+            schema: { type: 'string' },
+          },
+          {
+            name: 'limit',
+            in: 'query',
+            description:
+              'Maximum matching days to return, not individual times.',
+            schema: { type: 'integer', minimum: 1, maximum: 20, default: 5 },
+          },
+        ],
+        responses: {
+          '200': {
+            description:
+              'days contains matching dates in date order: { date, weekday, waitDays, earlierThanUsual, times: [{ time, start, bookingUrl }] }. limit counts days. totalMatches counts all matching times; totalDays counts all matching dates before the limit. soonest is the selected visit type’s unfiltered earliest opening, or null. hours is derived from all loaded openings for that visit: { firstTime, lastTime, weekdays }, or null if none are loaded; these are observed openings, not guaranteed working hours. otherVisit contains { visit, status, soonest } for the other visit type, without filters. Also includes status, checkedAt, timeZone, filter, call options, and booking instructions. No flat matches field.',
+          },
+          '502': { description: 'The official scheduler could not be reached' },
+        },
+      },
+    },
     [agentPaths.search]: {
       get: {
-        summary: 'Search public site content across office, services, FAQ, forms, and insurance',
+        summary:
+          'Search public site content across office, services, FAQ, forms, and insurance',
         operationId: 'searchPublicInfo',
         parameters: [
           {
@@ -746,73 +846,25 @@ type ToolResult = {
   structuredContent: Record<string, unknown>
 }
 
-export const mcpTools = [
-  {
-    annotations: { readOnlyHint: true },
-    description:
-      'Return a structured profile for Dr. Channing Hood and the current Golden office.',
-    inputSchema: {
-      additionalProperties: false,
-      properties: {},
-      type: 'object',
-    },
-    name: 'get_profile',
-  },
-  {
-    annotations: { readOnlyHint: true },
-    description:
-      'Return the Golden office address, phone, map link, hours, and area served.',
-    inputSchema: {
-      additionalProperties: false,
-      properties: {},
-      type: 'object',
-    },
-    name: 'get_office_details',
-  },
-  {
-    annotations: { readOnlyHint: true },
-    description:
-      'List Dr. Hood services. Optionally limit the response to medical or procedures.',
-    inputSchema: {
-      additionalProperties: false,
-      properties: {
-        category: {
-          enum: ['all', 'medical', 'procedures'],
-          type: 'string',
-        },
-      },
-      type: 'object',
-    },
-    name: 'list_services',
-  },
-  {
-    annotations: { readOnlyHint: true },
-    description:
-      'Return FAQ answers. Optionally pass a question string to retrieve the closest match.',
-    inputSchema: {
-      additionalProperties: false,
-      properties: {
-        question: {
-          description: 'A natural-language patient question.',
-          type: 'string',
-        },
-      },
-      type: 'object',
-    },
-    name: 'get_faq',
-  },
-  {
-    annotations: { readOnlyHint: true },
-    description:
-      'Return the official booking URL, forms, insurance information, and clinic phone number.',
-    inputSchema: {
-      additionalProperties: false,
-      properties: {},
-      type: 'object',
-    },
-    name: 'get_booking_options',
-  },
-] as const
+const faqStopWords = new Set(
+  'a an and are can do does for how i in is it my of on or she should the to what when where which who why will with you your'.split(
+    ' ',
+  ),
+)
+
+function bestFaqByKeywords(question: string) {
+  const keywords = tokenize(question).filter(
+    (token) => !faqStopWords.has(token),
+  )
+  let best: { entry: (typeof faqEntries)[number]; score: number } | null = null
+  for (const entry of faqEntries) {
+    const score =
+      countTokenMatches(entry.question, keywords.join(' ')) * 2 +
+      countTokenMatches(entry.answer, keywords.join(' '))
+    if (score > 0 && (!best || score > best.score)) best = { entry, score }
+  }
+  return best?.entry ?? null
+}
 
 function findFaq(question: string | undefined) {
   if (!question) {
@@ -830,11 +882,7 @@ function findFaq(question: string | undefined) {
     faqEntries.find((item) =>
       normalizedQuestion.includes(normalize(item.question)),
     ) ??
-    faqEntries.find((item) => {
-      const questionWords = normalizedQuestion.split(' ')
-      return questionWords.some((word) => normalize(item.question).includes(word))
-    }) ??
-    null
+    bestFaqByKeywords(question)
 
   return {
     matched,
@@ -843,9 +891,8 @@ function findFaq(question: string | undefined) {
 }
 
 export function getServicesResult(category: string | undefined) {
-  const resolvedCategory = category === 'medical' || category === 'procedures'
-    ? category
-    : 'all'
+  const resolvedCategory =
+    category === 'medical' || category === 'procedures' ? category : 'all'
 
   if (resolvedCategory === 'medical') {
     return {
@@ -1057,7 +1104,8 @@ export function callSiteTool(name: string, input: ToolInput): ToolResult {
   }
 
   if (name === 'get_faq') {
-    const question = typeof input?.question === 'string' ? input.question : undefined
+    const question =
+      typeof input?.question === 'string' ? input.question : undefined
     const payload = getFaqResult(question)
 
     return {
@@ -1078,7 +1126,7 @@ export function callSiteTool(name: string, input: ToolInput): ToolResult {
     return {
       content: [
         {
-          text: `Use the official appointment form at ${content.booking.href} or call ${content.office.phoneDisplay} for the Golden clinic.`,
+          text: `Choose an open time with Dr. Hood at ${content.booking.href}, request a callback at ${content.booking.callbackHref}, or call ${content.office.phoneDisplay} for the Golden clinic.`,
           type: 'text',
         },
       ],

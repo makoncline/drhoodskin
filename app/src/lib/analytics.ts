@@ -14,6 +14,11 @@ export function trackEvent(event: string, props: EventProps = {}) {
 
   const payload = { event, ...props }
 
+  const body = JSON.stringify({ e: event })
+  if (!navigator.sendBeacon('/api/events', body)) {
+    void fetch('/api/events', { method: 'POST', body, keepalive: true }).catch(() => undefined)
+  }
+
   window.dataLayer?.push(payload)
   window.dispatchEvent(new CustomEvent('analytics-event', { detail: payload }))
 
