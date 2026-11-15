@@ -26,6 +26,47 @@ function headers(
 }
 
 describe('activity log and report', () => {
+  it('counts persisted scheduler visits without counting booking-page navigation', () => {
+    vi.spyOn(console, 'log').mockImplementation(() => undefined)
+    const dir = mkdtempSync(join(tmpdir(), 'activity-'))
+    dirs.push(dir)
+    const visits = [
+      [
+        'hero_schedule_click',
+        'closing_schedule_click',
+        'header_schedule_click',
+        'sticky_schedule_click',
+      ],
+      [
+        'hero_book_page_click',
+        'closing_book_page_click',
+        'header_book_page_click',
+        'sticky_book_page_click',
+      ],
+      [
+        'hero_scheduler_click',
+        'book_schedule_click',
+        'book_early_schedule_click',
+      ],
+    ]
+    for (const [index, events] of visits.entries()) {
+      const context = requestContext(
+        headers('Mozilla/5.0 Chrome/130.0', `198.51.100.${index + 1}`),
+        'drhoodskin.com',
+      )
+      writeActivity({ ...context, k: 'request', p: '/' }, dir)
+      for (const event of events) {
+        writeActivity({ ...context, k: 'event', p: '/', e: event }, dir)
+      }
+    }
+    const summary = summarizeActivity(readActivity(dir, 1))
+    expect(summary.booking.schedule).toBe(7)
+    expect(summary.visitorDays).toBe(3)
+    expect(summary.bookingVisitorDays).toBe(2)
+    expect(summary.bookingRate).toBeCloseTo(2 / 3)
+    expect(summary.clicksByEvent).toContainEqual(['hero_book_page_click', 1])
+  })
+
   it('classifies people, AI agents, search bots, and scripts', () => {
     expect(
       classifyAgent('Mozilla/5.0 (iPhone; CPU iPhone OS 18_0) Safari/604.1').a,
@@ -76,7 +117,7 @@ describe('activity log and report', () => {
         ...requestContext(headers(phone, '198.51.100.1'), 'drhoodskin.com'),
         k: 'event',
         p: '/',
-        e: 'hero_schedule_click',
+        e: 'hero_scheduler_click',
       },
       dir,
     )

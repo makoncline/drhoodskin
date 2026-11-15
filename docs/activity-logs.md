@@ -24,7 +24,7 @@ The app writes one JSON line per tracked activity. No cookies, no IP addresses, 
 | `tool` | MCP tool name |
 | `via` | `webmcp` when a browser agent called the tool through WebMCP on the homepage |
 
-Logged requests: `/`, the booking page `/book`, and the agent files (`/llms.txt`, `/.well-known/*`, `/api/*`, `/mcp`, `/openapi.json`, `/sitemap.xml`). Assets and scanner probes are not logged. Click events are accepted only from people and only for known names. Booking page events: `book_schedule_click`, `book_early_schedule_click` (a time flagged earlier than usual), `book_call_click`, `book_callback_click`, `book_filter_change`, `book_visit_switch`, `book_switch_note_click`.
+Logged requests: `/`, the booking page `/book`, and the agent files (`/llms.txt`, `/.well-known/*`, `/api/*`, `/mcp`, `/openapi.json`, `/sitemap.xml`). Assets and scanner probes are not logged. Click events are accepted only from people and only for known names. Homepage booking buttons (`hero_book_page_click`, `closing_book_page_click`, `header_book_page_click`, `sticky_book_page_click`) open `/book` and do not count as official scheduler visits. The earlier homepage `*_schedule_click` events and the current fallback `*_scheduler_click` events count as official scheduler visits. Booking page events: `book_schedule_click`, `book_early_schedule_click` (a time flagged earlier than usual), `book_call_click`, `book_callback_click`, `book_filter_change`, `book_visit_switch`, `book_switch_note_click`.
 
 ## Report
 
@@ -37,4 +37,4 @@ docker compose exec drhoodskin node scripts/activity-report.ts --days=30 --json
 npm run activity:report -- --days=7
 ```
 
-The report shows page views (home and booking page), unique visitors per day, booking actions (see open times, callback, call) and the share of visitors who took one, clicks by event, referrers, countries, AI agents and the paths they read, search bots, MCP tool calls (WebMCP calls are marked), and Markdown requests. A booking click is not a completed appointment; USDP's scheduler confirms appointments.
+The report shows page views (home and booking page), unique visitors per day, booking actions (official scheduler visits: a time picked on `/book` or the fallback link; callback; call) and the share of visitors who took one, clicks by event, referrers, countries, AI agents and the paths they read, search bots, MCP tool calls (WebMCP calls are marked), and Markdown requests. A booking click is not a completed appointment; USDP's scheduler confirms appointments.

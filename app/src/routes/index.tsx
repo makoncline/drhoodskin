@@ -1,4 +1,4 @@
-import { createFileRoute } from '@tanstack/react-router'
+import { Link, createFileRoute } from '@tanstack/react-router'
 import { useEffect, useState } from 'react'
 import { ArrowUpRight, ChevronDown, MapPin, Phone } from 'lucide-react'
 import { drHoodVerified } from '../content/drHoodVerified'
@@ -78,7 +78,7 @@ const physicianSchema = {
         description: content.booking.summary,
         target: {
           '@type': 'EntryPoint',
-          urlTemplate: content.booking.href,
+          urlTemplate: content.booking.schedulerHref,
           actionPlatform: [
             'https://schema.org/DesktopWebPlatform',
             'https://schema.org/MobileWebPlatform',
@@ -725,13 +725,13 @@ function MobileActionBar() {
       inert={hidden}
     >
       <div className="mx-auto flex max-w-lg gap-3">
-        <a
-          href={content.booking.href}
-          onClick={() => trackEvent('sticky_schedule_click')}
+        <Link
+          to="/book"
+          onClick={() => trackEvent('sticky_book_page_click')}
           className="btn-primary flex-[1.6] px-4 whitespace-nowrap"
         >
           Book online
-        </a>
+        </Link>
         <a
           href={content.office.phoneHref}
           onClick={() => trackEvent('sticky_call_click')}

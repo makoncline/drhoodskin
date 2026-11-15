@@ -241,7 +241,7 @@ const loggedPaths = new Set<string>([
   ...Object.values(agentPaths),
 ])
 const trackedEvents =
-  /^(?:(?:hero|closing|header|sticky|visit)_(?:schedule|callback|call)_click|directions_click|press_click|review_outbound_click|forms_click|insurance_source_click|faq_expand|book_(?:early_)?schedule_click|book_call_click|book_callback_click|book_filter_change|book_visit_switch|book_switch_note_click)$/
+  /^(?:(?:hero|closing|header|sticky|visit)_(?:schedule|scheduler|book_page|callback|call)_click|directions_click|press_click|review_outbound_click|forms_click|insurance_source_click|faq_expand|book_(?:early_)?schedule_click|book_scheduler_click|book_call_click|book_callback_click|book_filter_change|book_visit_switch|book_switch_note_click)$/
 
 export default defineHandler(async (event) => {
   const url = new URL(event.req.url, siteCanonical)
@@ -391,7 +391,7 @@ export default defineHandler(async (event) => {
       return jsonResponse(
         {
           error: 'Open times could not be loaded.',
-          officialCalendar: bookingPayload.booking.href,
+          officialCalendar: bookingPayload.booking.schedulerHref,
           phone: contactPayload.phoneDisplay,
         },
         { status: 502 },

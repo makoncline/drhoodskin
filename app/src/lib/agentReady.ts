@@ -340,7 +340,8 @@ ${content.identity.title} providing dermatology care in Golden, Colorado through
 ## Fast facts
 
 - Accepting new patients: ${yesNo(content.identity.acceptingNewPatients)}
-- Book a specific time with Dr. Hood: ${content.booking.href}
+- See Dr. Hood’s open times, filtered by day and time: ${absoluteUrl('/book')}
+- Book a specific time with Dr. Hood: ${content.booking.schedulerHref}
 - Request a callback (does not book a time): ${content.booking.callbackHref}
 - Phone: ${content.office.phoneDisplay}
 - Address: ${content.office.address1}, ${content.office.city}, ${content.office.state} ${content.office.zip}
@@ -388,7 +389,8 @@ Facts on this site come from official U.S. Dermatology Partners pages and are re
 
 ## Book
 
-- [Choose an open time with Dr. Hood](${content.booking.href}): books a specific time on the U.S. Dermatology Partners scheduling site.
+- [See Dr. Hood’s open times](${absoluteUrl('/book')}): open times by date, with day and time filters (\`visit=exam\`, \`days\`, \`times\`, \`avoid\`, same values as below). Each time links to the official scheduler.
+- [Choose an open time with Dr. Hood](${content.booking.schedulerHref}): books a specific time on the U.S. Dermatology Partners scheduling site.
 - [Request a callback](${content.booking.callbackHref}): sends a request; the office calls back. Does not book a time.
 - [Find times that fit](${absoluteUrl(agentPaths.appointments)}?days=mon,fri&times=early-morning,late-afternoon&avoid=09:00-17:00): live openings grouped by date, filtered by weekday (\`mon\`–\`sun\`), time band (\`early-morning\`, \`late-morning\`, \`early-afternoon\`, \`late-afternoon\`), and busy ranges in Mountain Time (\`avoid=09:00-17:00\`, comma-separated). Also the MCP tool \`find_appointments\`, with \`avoid\` as an array of strings. Busy ranges exclude starts in [from, to); malformed ranges are ignored. \`limit\` counts days (default 5, maximum 20). Returns booking links, total matching times and days, the unfiltered soonest opening, observed hours from loaded openings, and the other visit type's unfiltered availability.
 - A full-body skin exam needs a full-body slot (\`visit=full-body-exam\`). Never offer an office-visit time for a full-body exam. An office visit (\`visit=office\`, the default) is for a specific concern. Confirm the visit type and time with the patient. Give booking links to the patient; do not open them.
@@ -453,7 +455,7 @@ Use this guide when an agent needs trustworthy, read-only facts about Dr. Channi
 
 ## Booking guardrails
 
-- Use the official scheduling URL, which books a specific time: ${content.booking.href}
+- Use the official scheduling URL, which books a specific time: ${content.booking.schedulerHref}
 - A full-body skin exam needs a full-body slot (\`visit=full-body-exam\`). Never offer an office-visit time for a full-body exam. An office visit (\`visit=office\`, the default) is for a specific concern.
 - Confirm the visit type and time with the patient. Give booking links to the patient; do not open them. The patient completes booking on the official scheduling page.
 - The other visit type's availability is unfiltered. Do not assume that it fits the patient's schedule or visit needs. Observed hours describe loaded openings, not guaranteed working hours.
@@ -521,7 +523,7 @@ This site is an informational guide. Scheduling happens on the official U.S. Der
 ## Recommended flow
 
 1. Confirm the user wants Dr. Channing Hood at the Golden office.
-2. Offer the official appointment URL first: ${content.booking.href}
+2. Offer the official appointment URL first: ${content.booking.schedulerHref}
 3. Offer the clinic phone number when human scheduling is preferred: ${content.office.phoneDisplay}
 4. If the user is a new patient, share the official forms and insurance links from the site API.
 
@@ -837,6 +839,11 @@ export const sitemapXml = `<?xml version="1.0" encoding="UTF-8"?>
     <changefreq>weekly</changefreq>
     <priority>1.0</priority>
   </url>
+  <url>
+    <loc>${escapeXml(absoluteUrl('/book'))}</loc>
+    <changefreq>daily</changefreq>
+    <priority>0.9</priority>
+  </url>
 </urlset>
 `
 
@@ -1126,7 +1133,7 @@ export function callSiteTool(name: string, input: ToolInput): ToolResult {
     return {
       content: [
         {
-          text: `Choose an open time with Dr. Hood at ${content.booking.href}, request a callback at ${content.booking.callbackHref}, or call ${content.office.phoneDisplay} for the Golden clinic.`,
+          text: `Choose an open time with Dr. Hood at ${content.booking.schedulerHref}, request a callback at ${content.booking.callbackHref}, or call ${content.office.phoneDisplay} for the Golden clinic.`,
           type: 'text',
         },
       ],
