@@ -22,11 +22,11 @@ It is the only site about Dr. Hood as a person. USDP pages present her as one pr
 
 - Dr. Hood is employed by USDP. All appointments are confirmed in USDP or vendor flows, never on this site.
 - She is booked out for weeks. Public wait times are not confirmed. The site must not promise availability it cannot show.
-- The site also serves agents through read-only data surfaces (`app/server.ts`, `app/src/lib/agentReady.ts`).
+- The site also serves agents through read-only data surfaces (`src/server/http.ts`, `src/lib/agentReady.ts`).
 
 ## Capabilities and Constraints
 
-- Content lives in `app/src/content/drHoodVerified.ts`. Only claims backed by the official sources listed there. No awards, review totals, or outcome claims.
+- Content lives in `src/content/drHoodVerified.ts`. Only claims backed by the official sources listed there. No awards, review totals, or outcome claims.
 - Do not show either physician assistant on the public site.
 - Procedures, services, and conditions are out of scope for current site work (owner decision, 2026-11-14). Keep existing service content unchanged until a separate decision.
 - Do not make USDP unhappy: no competing booking, no criticism, no off-brand claims about the group.
@@ -40,10 +40,10 @@ It is the only site about Dr. Hood as a person. USDP pages present her as one pr
 
 ## Evidence on Hand
 
-- `app/public/dr-hood-headshot.jpg`: official headshot, 693x780.
+- `public/dr-hood-headshot.jpg`: official headshot, 693x780.
 - Two dated Google reviews (in the content file). Clinic-page reviews that name her are not reviews on her own profile.
 - Featured in TIME; published in JAAD International; training at Notre Dame, LSU School of Medicine, Ochsner, New York Medical College (chief resident); AOA, AAD, ASDS.
-- `app/public/golden-office.jpg` is a stock family photo, not the office. Do not present it as the office.
+- `public/golden-office.jpg` is a stock family photo, not the office. Do not present it as the office.
 - No photos of the Golden office, no patient photos, no video.
 
 ## Product Principles

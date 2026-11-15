@@ -1,0 +1,56 @@
+{
+  "name": "drhoodskin",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "setup": "bash scripts/cloud-setup.sh",
+    "dev": "node scripts/dev/watch.js",
+    "dev:once": "pnpm build && node scripts/dev/start.js",
+    "dev:reset": "node scripts/dev/reset.js",
+    "build": "vp build",
+    "test": "pnpm build && pnpm test:helpers && node --test --test-concurrency=1 test/e2e/*.test.js",
+    "test:helpers": "vp test run --config helpers.config.ts",
+    "check": "node scripts/check.js",
+    "typecheck": "tsc",
+    "browser:install": "playwright install chromium",
+    "launch:check": "node scripts/launch-check.js",
+    "db:generate": "drizzle-kit generate",
+    "format": "vp fmt",
+    "availability:poll": "cd app && node scripts/poll-availability.ts --force",
+    "availability:report": "cd app && node scripts/availability-report.ts",
+    "activity:export": "node scripts/activity-export.js",
+    "activity:report": "node scripts/activity-report.ts"
+  },
+  "dependencies": {
+    "@tanstack/react-router": "1.170.46",
+    "@tanstack/react-start": "1.169.4",
+    "@tanstack/router-core": "1.171.34",
+    "drizzle-orm": "1.0.0-rc.5",
+    "lucide-react": "^0.545.0",
+    "react": "19.3.1",
+    "react-dom": "19.3.1"
+  },
+  "devDependencies": {
+    "@cloudflare/vite-plugin": "1.69.1",
+    "@cloudflare/workers-types": "5.20261115.1",
+    "@tailwindcss/vite": "4.1.18",
+    "@types/node": "26.6.6",
+    "@types/react": "19.3.0",
+    "@types/react-dom": "19.3.0",
+    "@vitejs/plugin-react": "6.2.1",
+    "drizzle-kit": "1.0.0-rc.5",
+    "jsonc-parser": "3.3.1",
+    "miniflare": "5.20261103.0-beta",
+    "playwright": "1.64.1",
+    "tailwindcss": "4.1.18",
+    "tsx": "4.21.0",
+    "typescript": "7.0.2",
+    "vite": "catalog:",
+    "vite-plus": "catalog:",
+    "wrangler": "4.162.0"
+  },
+  "engines": {
+    "node": ">=24 <25"
+  },
+  "packageManager": "pnpm@10.29.2"
+}

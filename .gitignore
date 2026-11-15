@@ -3,3 +3,10 @@ data/
 .DS_Store
 .playwright-mcp/
 .impeccable/review/
+node_modules/
+.local/
+.wrangler/
+.tanstack/
+dist/
+test-results/
+.env*
