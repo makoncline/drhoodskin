@@ -36,8 +36,39 @@ import {
 
 type JsonRpcRequest = {
   id?: number | string | null
-  method?: string
+  method: string
   params?: Record<string, unknown>
+}
+
+const knownMcpTools = new Set<string>(mcpTools.map((tool) => tool.name))
+
+class RequestBodyTooLargeError extends Error {}
+
+async function readLimitedBody(request: Request, maxBytes: number) {
+  if (Number(request.headers.get('content-length')) > maxBytes) {
+    void request.body?.cancel().catch(() => undefined)
+    throw new RequestBodyTooLargeError()
+  }
+  if (!request.body) return ''
+
+  const reader = request.body.getReader()
+  const decoder = new TextDecoder()
+  let bytes = 0
+  let text = ''
+  try {
+    for (;;) {
+      const { done, value } = await reader.read()
+      if (done) return text + decoder.decode()
+      bytes += value.byteLength
+      if (bytes > maxBytes) {
+        void reader.cancel().catch(() => undefined)
+        throw new RequestBodyTooLargeError()
+      }
+      text += decoder.decode(value, { stream: true })
+    }
+  } finally {
+    reader.releaseLock()
+  }
 }
 
 function withBaseHeaders(headers: HeadersInit = {}) {
@@ -130,20 +161,34 @@ async function handleMcpRequest(
   context: ReturnType<typeof requestContext>,
   via: 'webmcp' | undefined,
 ) {
-  let rpcRequest: JsonRpcRequest
+  let body: unknown
 
   try {
-    rpcRequest = (await request.json()) as JsonRpcRequest
-  } catch {
+    body = JSON.parse(await readLimitedBody(request, 64 * 1024))
+  } catch (error) {
+    if (error instanceof RequestBodyTooLargeError) {
+      return textResponse('Request body too large.', { status: 413 })
+    }
     return mcpError(null, -32700, 'Invalid JSON request body', 400)
   }
+
+  if (
+    body === null ||
+    typeof body !== 'object' ||
+    Array.isArray(body) ||
+    !('method' in body) ||
+    typeof body.method !== 'string'
+  ) {
+    return mcpError(null, -32600, 'Invalid Request', 400)
+  }
+  const rpcRequest = body as JsonRpcRequest
 
   const headers = withBaseHeaders({
     'Content-Type': 'application/json; charset=utf-8',
     'MCP-Protocol-Version': mcpProtocolVersion,
   })
 
-  if (rpcRequest.method?.startsWith('notifications/')) {
+  if (rpcRequest.method.startsWith('notifications/')) {
     return new Response(null, { status: 202 })
   }
 
@@ -193,6 +238,10 @@ async function handleMcpRequest(
 
     if (!toolName) {
       return mcpError(rpcRequest.id, -32602, 'Missing tool name', 400)
+    }
+
+    if (!knownMcpTools.has(toolName)) {
+      return mcpError(rpcRequest.id, -32601, `Unknown tool: ${toolName}`, 404)
     }
 
     writeActivity({
@@ -262,7 +311,15 @@ export default defineHandler(async (event) => {
 
   if (pathname === '/api/events') {
     if (method !== 'POST') return textResponse('Use POST.', { status: 405 })
-    const name = (await event.req.text()).slice(0, 200)
+    let name: string
+    try {
+      name = await readLimitedBody(event.req, 1024)
+    } catch (error) {
+      if (error instanceof RequestBodyTooLargeError) {
+        return textResponse('Request body too large.', { status: 413 })
+      }
+      throw error
+    }
     const eventName = /^\{"e":"([a-z_]{3,40})"\}$/.exec(name)?.[1]
     if (eventName && trackedEvents.test(eventName) && context.a === 'human') {
       writeActivity({ ...context, k: 'event', p: '/', e: eventName })

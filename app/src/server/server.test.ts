@@ -1,3 +1,6 @@
+import { mkdtempSync, readFileSync, rmSync } from 'node:fs'
+import { tmpdir } from 'node:os'
+import { join } from 'node:path'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import type serverHandler from '../../server'
 
@@ -43,6 +46,14 @@ const examSchedule: Record<string, string[]> = {
 let server: typeof serverHandler
 let scheduler: { office: SchedulerMode; exam: SchedulerMode }
 let schedulerFetch: ReturnType<typeof vi.fn<typeof fetch>>
+const logDirs: string[] = []
+
+function activityLogFile() {
+  const dir = mkdtempSync(join(tmpdir(), 'activity-server-'))
+  logDirs.push(dir)
+  vi.stubEnv('LOG_DIR', dir)
+  return join(dir, `activity-${now.toISOString().slice(0, 10)}.jsonl`)
+}
 
 function schedulerWindow(day: string, reason: string) {
   const schedule = reason === '56487' ? officeSchedule : examSchedule
@@ -124,6 +135,89 @@ afterEach(async () => {
   vi.restoreAllMocks()
   vi.unstubAllGlobals()
   vi.unstubAllEnvs()
+  for (const dir of logDirs.splice(0)) {
+    rmSync(dir, { recursive: true, force: true })
+  }
+})
+
+describe.each([
+  ['/api/events', 1024],
+  ['/mcp', 64 * 1024],
+] as const)('POST %s body limit', (path, maxBytes) => {
+  it('rejects an oversized Content-Length before parsing the body', async () => {
+    const response = await server.fetch(
+      new Request(`${site}${path}`, {
+        method: 'POST',
+        headers: { 'Content-Length': String(maxBytes + 1) },
+        body: '{}',
+      }),
+    )
+    expect(response.status).toBe(413)
+    expect(schedulerFetch).not.toHaveBeenCalled()
+  })
+
+  it.each([undefined, '1'])(
+    'stops an oversized stream with Content-Length=%s',
+    async (contentLength) => {
+      let cancelled = false
+      let chunks = 0
+      const body = new ReadableStream<Uint8Array>({
+        pull(controller) {
+          chunks += 1
+          controller.enqueue(new TextEncoder().encode('é'.repeat(256)))
+        },
+        cancel() {
+          cancelled = true
+        },
+      })
+      const request = new Request(`${site}${path}`, {
+        method: 'POST',
+        headers:
+          contentLength === undefined
+            ? {}
+            : { 'Content-Length': contentLength },
+        body,
+        duplex: 'half',
+      } as RequestInit)
+      const response = await server.fetch(request)
+      expect(response.status).toBe(413)
+      expect(cancelled).toBe(true)
+      expect(chunks).toBeLessThanOrEqual(maxBytes / 512 + 2)
+      expect(schedulerFetch).not.toHaveBeenCalled()
+    },
+  )
+})
+
+describe('POST /api/events', () => {
+  it('persists only known click events from people', async () => {
+    const file = activityLogFile()
+    for (const [name, userAgent] of [
+      ['hero_book_page_click', 'Mozilla/5.0 Chrome/130.0'],
+      ['unknown_click', 'Mozilla/5.0 Chrome/130.0'],
+      ['hero_book_page_click', 'curl/8.6.0'],
+    ]) {
+      const response = await server.fetch(
+        new Request(`${site}/api/events`, {
+          method: 'POST',
+          headers: { 'User-Agent': userAgent },
+          body: JSON.stringify({ e: name }),
+        }),
+      )
+      expect(response.status).toBe(204)
+    }
+    const entries = readFileSync(file, 'utf8')
+      .trim()
+      .split('\n')
+      .map((line) => JSON.parse(line))
+    expect(entries).toEqual([
+      expect.objectContaining({
+        k: 'event',
+        a: 'human',
+        e: 'hero_book_page_click',
+      }),
+    ])
+    expect(schedulerFetch).not.toHaveBeenCalled()
+  })
 })
 
 describe('GET /api/appointments', () => {
@@ -588,6 +682,45 @@ describe('POST /mcp', () => {
     })
     expect(schedulerFetch).not.toHaveBeenCalled()
   })
+
+  it('does not persist unknown tool names', async () => {
+    const file = activityLogFile()
+    expect(
+      (await rpc('tools/call', { name: 'get_office_details' })).status,
+    ).toBe(200)
+    const unknownTool = `unknown_tool_${'x'.repeat(4096)}`
+    const response = await rpc('tools/call', { name: unknownTool }, 4)
+    expect(response.status).toBe(404)
+    expect(JSON.parse(await response.text())).toEqual({
+      jsonrpc: '2.0',
+      id: 4,
+      error: { code: -32601, message: `Unknown tool: ${unknownTool}` },
+    })
+    const log = readFileSync(file, 'utf8')
+    expect(log).not.toContain(unknownTool)
+    const entries = log
+      .trim()
+      .split('\n')
+      .map((line) => JSON.parse(line))
+    expect(entries).toEqual([
+      expect.objectContaining({ k: 'mcp', tool: 'get_office_details' }),
+    ])
+    expect(schedulerFetch).not.toHaveBeenCalled()
+  })
+
+  it.each(['null', '42', '[]', '[{"method":"ping"}]', '{}', '{"method":1}'])(
+    'returns invalid request -32600 for %s',
+    async (body) => {
+      const response = await postMcp(body)
+      expect(response.status).toBe(400)
+      expect(JSON.parse(await response.text())).toEqual({
+        jsonrpc: '2.0',
+        id: null,
+        error: { code: -32600, message: 'Invalid Request' },
+      })
+      expect(schedulerFetch).not.toHaveBeenCalled()
+    },
+  )
 
   it('returns parse error -32700 for invalid JSON', async () => {
     const response = await postMcp('{"jsonrpc":')

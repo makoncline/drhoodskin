@@ -7,22 +7,28 @@ The app writes one JSON line per tracked activity. No cookies, no IP addresses, 
 - Production: `LOG_DIR=/app/data/logs` in the container, mounted from `./data` next to `compose.yaml`. One file per UTC day: `activity-YYYY-MM-DD.jsonl`. Lines also go to stdout (`docker compose logs`).
 - Local preview: `app/.data/logs`.
 
+## Limits
+
+POST request bodies are limited to 1 KB for `/api/events` and 64 KB for `/mcp`. Larger bodies return HTTP 413, even when `Content-Length` is absent or too small. MCP tool calls are logged only for known tool names.
+
+Docker stdout logs use the `json-file` driver with a 10 MB limit per file and at most three files. This limit does not cover the daily JSONL files in `LOG_DIR`.
+
 ## What a line contains
 
-| Field | Meaning |
-|---|---|
-| `t` | ISO time (UTC) |
-| `k` | `request` (page or agent file), `event` (click in the page), `mcp` (MCP tool call) |
-| `p` | path |
-| `a` | `human`, `ai-agent`, `search-bot`, `other-bot` (from the user agent) |
-| `an` | agent or bot name, for example `ChatGPT-User`, `Googlebot` |
-| `v` | anonymous visitor ID for people: a hash of IP, user agent, and a random salt that changes each day and is never stored. Counts unique visitors per day; cannot link days or identify anyone. |
-| `c` | country (Cloudflare header) |
-| `r` | external referrer host |
-| `md` | request asked for Markdown |
-| `e` | click event name, for example `hero_schedule_click` |
-| `tool` | MCP tool name |
-| `via` | `webmcp` when a browser agent called the tool through WebMCP on the homepage |
+| Field  | Meaning                                                                                                                                                                                      |
+| ------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `t`    | ISO time (UTC)                                                                                                                                                                               |
+| `k`    | `request` (page or agent file), `event` (click in the page), `mcp` (MCP tool call)                                                                                                           |
+| `p`    | path                                                                                                                                                                                         |
+| `a`    | `human`, `ai-agent`, `search-bot`, `other-bot` (from the user agent)                                                                                                                         |
+| `an`   | agent or bot name, for example `ChatGPT-User`, `Googlebot`                                                                                                                                   |
+| `v`    | anonymous visitor ID for people: a hash of IP, user agent, and a random salt that changes each day and is never stored. Counts unique visitors per day; cannot link days or identify anyone. |
+| `c`    | country (Cloudflare header)                                                                                                                                                                  |
+| `r`    | external referrer host                                                                                                                                                                       |
+| `md`   | request asked for Markdown                                                                                                                                                                   |
+| `e`    | click event name, for example `hero_schedule_click`                                                                                                                                          |
+| `tool` | MCP tool name                                                                                                                                                                                |
+| `via`  | `webmcp` when a browser agent called the tool through WebMCP on the homepage                                                                                                                 |
 
 Logged requests: `/`, the booking page `/book`, and the agent files (`/llms.txt`, `/.well-known/*`, `/api/*`, `/mcp`, `/openapi.json`, `/sitemap.xml`). Assets and scanner probes are not logged. Click events are accepted only from people and only for known names. Homepage booking buttons (`hero_book_page_click`, `closing_book_page_click`, `header_book_page_click`, `sticky_book_page_click`) open `/book` and do not count as official scheduler visits. The earlier homepage `*_schedule_click` events and the current fallback `*_scheduler_click` events count as official scheduler visits. Booking page events: `book_schedule_click`, `book_early_schedule_click` (a time flagged earlier than usual), `book_call_click`, `book_callback_click`, `book_filter_change`, `book_visit_switch`, `book_switch_note_click`.
 
