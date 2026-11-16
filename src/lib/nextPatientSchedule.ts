@@ -57,10 +57,11 @@ export function formatClock(minutes: number) {
 }
 
 function parseClock(label: string) {
-  const match = /^(\d{1,2}):(\d{2})\s*(am|pm)$/i.exec(label.trim())
-  if (!match || Number(match[1]) < 1 || Number(match[1]) > 12 || Number(match[2]) > 59) return null
+  const match = /^(\d{1,2})(?::(\d{2}))?\s*(am|pm)$/i.exec(label.trim())
+  const minutes = Number(match?.[2] ?? 0)
+  if (!match || Number(match[1]) < 1 || Number(match[1]) > 12 || minutes > 59) return null
   const hour = (Number(match[1]) % 12) + (match[3].toLowerCase() === 'pm' ? 12 : 0)
-  return hour * 60 + Number(match[2])
+  return hour * 60 + minutes
 }
 
 function offsetFor(date: string, minutes: number) {
