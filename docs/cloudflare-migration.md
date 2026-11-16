@@ -46,7 +46,7 @@ Phase 1 was verified locally before account work. The initial deployment scaffol
 - Approved: Free D1 `drhoodskin`, Worker `drhoodskin`, one cron, and a main-only GitHub `production` environment. No DNS, custom-domain, tunnel, or server changes are approved.
 - Created D1 `drhoodskin` (`788fd598-812f-4933-8334-a56d9d82d385`) with the logged-in local Wrangler CLI. Remote schema installation waits for the deployment job.
 - Confirmed account `862f016642ad509483b546d81fc48f63` is on Workers Free. Existing Workers use one of five account Cron Triggers.
-- Confirmed the workers.dev subdomain is `daylilycatalog.workers.dev`. The intended site URL is `https://drhoodskin.makon.workers.dev`, not yet deployed.
+- The account workers.dev subdomain was `daylilycatalog.workers.dev` until 2026-11-16; it is now `makon.workers.dev`. The intended site URL is `https://drhoodskin.makon.workers.dev`, not yet deployed.
 - Keep secret values out of source, logs, and chat. The coordinator installs `CLOUDFLARE_API_TOKEN`. The implementation agent can set the non-secret account ID, but must stop at the token prerequisite and must not merge the PR.
 
 ## Template findings
