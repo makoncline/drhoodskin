@@ -6,6 +6,7 @@ import tailwindcss from '@tailwindcss/vite'
 
 export default defineConfig({
   fmt: { semi: false, singleQuote: true },
+  preview: { host: '127.0.0.1' },
   plugins: lazyPlugins(() => [
     cloudflare({ viteEnvironment: { name: 'ssr' } }),
     tailwindcss(),
