@@ -204,6 +204,30 @@ test('public-agent-and-appointment-boundaries', async (t) => {
     assert.equal(await response.text(), '')
   }
   assert.equal((await r.dispatch('/mcp')).status, 405)
+  for (const [path, init, status] of [
+    ['/mcp', undefined, 405],
+    ['/api/appointments?visit=unknown', undefined, 400],
+    [
+      '/mcp',
+      {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ jsonrpc: '2.0', id: 1, method: 'unknown_method' }),
+      },
+      400,
+    ],
+    [
+      '/api/events',
+      { method: 'POST', headers: { connection: 'close' }, body: 'x'.repeat(2048) },
+      413,
+    ],
+  ]) {
+    const response = await r.dispatch(path, init)
+    assert.equal(response.status, status, path)
+    assert.ok(response.headers.get('x-correlation-id'), `${path} ${status} has a correlation ID`)
+    assert.equal(response.headers.get('x-release'), 'local', `${path} ${status} has a release`)
+    await response.body?.cancel()
+  }
   await eventually(
     () => activityRows(r).filter((row) => row.k === 'mcp'),
     (rows) => {

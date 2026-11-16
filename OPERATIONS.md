@@ -45,6 +45,14 @@ The protected deployment job runs only on current `main`, in the GitHub `product
 
 Registering the target only after the image-only baseline prevents the webhook from seeing the old build-based Compose. The first main image publication can precede target setup; do not treat a missing target as permission to build on the VPS.
 
+**Completed 2026-11-16.** Commit `1d9323a` runs as `ghcr.io/makoncline/drhoodskin@sha256:f7ae194480d42a515d9e84d773ddfb0dc0d2a7ca5767c725994f73c519111a78` with the 256 MiB limit and the original `./data` mount. The pre-switch Compose file is in `/srv/stacks/drhoodskin-rollback-20261116T043848Z/`, and the old image is tagged `drhoodskin-rollback:5f25162`. To return to it, restore that `compose.yaml`, remove `.env`, and run `docker compose up -d --no-build --pull never`.
+
+The webhook target `/etc/bootstrap/deploy-hooks/drhoodskin.env` sets `DOCKER_CONFIG` to the app's private registry login, a separate `deploy-cache/` directory, automatic rollback, and no image pruning. Its smoke URL is `https://drhoodskin.com/api/status`.
+
+`/srv/stacks/drhoodskin` is still a Git checkout of the old source, with `compose.yaml` intentionally changed and `.env` added. Never run `git pull` or any build there. Deliver Compose changes by copying the reviewed file from `main`.
+
+The first published package inherited **public** visibility from the public repository, although new packages are documented as private. The CI anonymous-read check caught it and blocked the deploy. Makon's chosen visibility was then set to private in the package settings; an anonymous manifest request now returns 403.
+
 ## Normal release and rollback
 
 After bootstrap, a tested main release publishes its image, calls the existing webhook, and runs the live checks. The server should never need application source or dependencies for an image release. Compose changes remain a separate reviewed configuration update; a new image tag does not synchronize Compose automatically.
