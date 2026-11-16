@@ -8,7 +8,7 @@ web
 
 ## Users
 
-Prospective patients in Golden, Wheat Ridge, Applewood, Morrison, Evergreen, and west Denver. Most arrive on a phone from a Google search for Dr. Hood's name or for a dermatologist in Golden. Their job: decide if Dr. Hood is right for them, then request a visit. Existing patients come for the phone number, hours, directions, and forms. Patients include adults and parents of children; some are older adults.
+Prospective patients in Golden, Lakewood, Arvada, Wheat Ridge, Applewood, Morrison, Evergreen, and west Denver. Most arrive on a phone from a Google search for Dr. Hood's name or for a dermatologist in Golden. Their job: decide if Dr. Hood is right for them, then request a visit. Existing patients come for the phone number, hours, directions, and forms. Patients include adults and parents of children; some are older adults.
 
 ## Product Purpose
 
@@ -43,8 +43,8 @@ It is the only site about Dr. Hood as a person. USDP pages present her as one pr
 - `public/dr-hood-headshot.jpg`: official headshot, 693x780.
 - Two dated Google reviews (in the content file). Clinic-page reviews that name her are not reviews on her own profile.
 - Featured in TIME; published in JAAD International; training at Notre Dame, LSU School of Medicine, Ochsner, New York Medical College (chief resident); AOA, AAD, ASDS.
-- `public/golden-office.jpg` is a stock family photo, not the office. Do not present it as the office.
-- No photos of the Golden office, no patient photos, no video.
+- `public/golden-office-building.jpg`: Red Rocks Medical Center entrance (400 Indiana St), from the building's public site (ssoc.com). Owner approved its use on 2026-11-16 and reports that USDP uses the same photo.
+- No photos inside the Golden office, no patient photos, no video.
 
 ## Product Principles
 

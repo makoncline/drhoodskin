@@ -98,6 +98,7 @@ const physicianSchema = {
         name: 'U.S. Dermatology Partners',
         url: 'https://www.usdermatologypartners.com/',
       },
+      image: `${siteUrl}${content.office.buildingPhoto.src}`,
       hasMap: content.map.directionsHref,
       address: {
         '@type': 'PostalAddress',
@@ -539,11 +540,26 @@ function VisitOffice() {
         </div>
 
         <div className="md:pt-2">
+          <figure className="m-0 mb-8">
+            <div className="frame">
+              <img
+                src={content.office.buildingPhoto.src}
+                alt={content.office.buildingPhoto.alt}
+                width={content.office.buildingPhoto.width}
+                height={content.office.buildingPhoto.height}
+                className="block aspect-[1312/668] w-full object-cover"
+                loading="lazy"
+              />
+            </div>
+            <figcaption className="mt-3 text-[0.95rem] text-ink-muted">
+              {content.office.buildingPhoto.caption}
+            </figcaption>
+          </figure>
           <div className="frame">
             <iframe
               title="Map of U.S. Dermatology Partners Golden at 400 Indiana St, Golden, Colorado"
               src={content.map.embedSrc}
-              className="block aspect-[4/3] w-full border-0 bg-card md:aspect-[4/5]"
+              className="block aspect-[4/3] w-full border-0 bg-card"
               loading="lazy"
               referrerPolicy="no-referrer-when-downgrade"
             />
