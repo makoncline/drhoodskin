@@ -17,17 +17,13 @@ export default defineHandler(async (event) => {
     headers.set('Content-Signal', contentSignalValue)
     headers.set('Vary', 'Accept')
   }
-  const response = await handlePublicRequest(event.req, {
+  for (const [name, value] of headers) {
+    event.res.headers.set(name, value)
+    event.res.errHeaders.set(name, value)
+  }
+  return handlePublicRequest(event.req, {
     waitUntil(task) {
       void task.catch(() => console.error('Background activity failed'))
     },
   })
-  if (!response) {
-    for (const [name, value] of headers) event.res.headers.set(name, value)
-    return
-  }
-  // h3 discards event.res headers when a handler returns an error-status Response.
-  const result = new Response(response.body, response)
-  for (const [name, value] of headers) result.headers.set(name, value)
-  return result
 })

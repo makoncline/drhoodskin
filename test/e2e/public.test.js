@@ -205,6 +205,7 @@ test('public-agent-and-appointment-boundaries', async (t) => {
   }
   assert.equal((await r.dispatch('/mcp')).status, 405)
   for (const [path, init, status] of [
+    ['/dev/scheduler', undefined, 404],
     ['/mcp', undefined, 405],
     ['/api/appointments?visit=unknown', undefined, 400],
     [
