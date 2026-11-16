@@ -6,7 +6,7 @@
 
 export const drHoodVerified = {
   meta: {
-    lastReviewed: '2026-11-14',
+    lastReviewed: '2026-11-16',
   },
 
   officialSources: {
@@ -35,7 +35,7 @@ export const drHoodVerified = {
   seo: {
     title: 'Dr. Channing Hood | Dermatologist in Golden, CO',
     description:
-      'Board-certified dermatologist Dr. Channing Hood sees adults and children in Golden, CO for skin cancer checks, acne, eczema, psoriasis, and more. Book online.',
+      'Board-certified dermatologist Dr. Channing Hood sees adults and children in Golden, CO, near Lakewood and Arvada, for skin cancer checks, acne, eczema, and more.',
     canonical: 'https://drhoodskin.com/',
   },
 
@@ -58,13 +58,22 @@ export const drHoodVerified = {
     phoneHref: 'tel:+17206040602',
     locationNote:
       'Located in the Red Rocks Medical Center at the NE corner of 6th Ave and Indiana St, just 1/2 mile east of Jefferson County Fairgrounds.',
+    buildingPhoto: {
+      src: '/golden-office-building.jpg',
+      width: 1312,
+      height: 668,
+      alt: 'Entrance of Red Rocks Medical Center at 400 Indiana Street, Golden, with a curved canopy over the front doors',
+      caption: 'Red Rocks Medical Center, 400 Indiana St. The office is Suite 380.',
+    },
     areaServed: [
       'Golden',
+      'Lakewood',
+      'Arvada',
       'Wheat Ridge',
       'Applewood',
       'Morrison',
       'Evergreen',
-      'West Denver',
+      'west Denver',
     ],
     hours: [
       ['Monday', '8:00AM - 4:30PM'],
