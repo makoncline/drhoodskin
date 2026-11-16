@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
+import { readFileSync } from 'node:fs'
 import { start, eventually } from './harness.js'
 import { addDays } from '../../src/lib/nextPatientSchedule.ts'
 
@@ -11,7 +12,16 @@ test('public-agent-and-appointment-boundaries', async (t) => {
   assert.equal(home.status, 200)
   assert.match(home.headers.get('link'), /openapi/)
   assert.ok(home.headers.get('x-correlation-id'))
-  assert.match(await home.text(), /Dr\. Hood/)
+  const staticHome = readFileSync('dist/client/index.html', 'utf8')
+  assert.match(staticHome, /Dr\. Hood/)
+  assert.equal(await home.text(), staticHome)
+  const homeWithQuery = await r.dispatch('/?utm_source=fixture')
+  assert.equal(await homeWithQuery.text(), staticHome)
+  assert.notEqual(homeWithQuery.headers.get('x-correlation-id'), home.headers.get('x-correlation-id'))
+  const head = await r.dispatch('/', { method: 'HEAD' })
+  assert.equal(head.status, 200)
+  assert.equal(await head.text(), '')
+  assert.match(head.headers.get('link'), /openapi/)
   const markdown = await r.dispatch('/', { headers: { accept: 'text/markdown, text/html' } })
   assert.match(markdown.headers.get('content-type'), /text\/markdown/)
   assert.equal(markdown.headers.get('vary'), 'Accept')

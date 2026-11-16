@@ -119,11 +119,15 @@ function decodeText(value: string) {
   )
 }
 
-function attribute(tag: string, name: string) {
-  const match = new RegExp(`(?:^|\\s)${name}\\s*=\\s*(?:"([^"]*)"|'([^']*)'|([^\\s>]+))`, 'i').exec(
-    tag,
-  )
-  return decodeText(match?.[1] ?? match?.[2] ?? match?.[3] ?? '')
+const attributePatterns = {
+  class: /(?:^|\s)class\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s>]+))/i,
+  href: /(?:^|\s)href\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s>]+))/i,
+}
+
+function attribute(tag: string, name: keyof typeof attributePatterns) {
+  const match = attributePatterns[name].exec(tag)
+  const value = match?.[1] ?? match?.[2] ?? match?.[3] ?? ''
+  return value.includes('&') ? decodeText(value) : value
 }
 
 function hasClass(tag: string, name: string) {
@@ -134,13 +138,6 @@ function parseWindow(window: WindowResponse) {
   const phoneOnly = /please call|call to schedule/i.test(window.html.replace(/<[^>]*>/g, ' '))
   const days: ScheduleDay[] = []
   let recognized = phoneOnly
-  let slotLinks = false
-  for (const link of window.html.matchAll(/<a\b([^>]*)>/gi)) {
-    if (hasClass(link[1], 'nextpatient-slot-time')) {
-      slotLinks = true
-      break
-    }
-  }
   for (const cell of window.html.matchAll(/<td\b([^>]*)>([\s\S]*?)<\/td\s*>/gi)) {
     if (!hasClass(cell[1], 'nextpatient-schedule-day-slots')) continue
     recognized = true
@@ -169,8 +166,12 @@ function parseWindow(window: WindowResponse) {
     days.push({ date, slots })
   }
   if (!recognized) throw new Error('Unrecognized scheduler response')
-  if (slotLinks && !days.some((day) => day.slots.length > 0))
-    throw new Error('Unrecognized scheduler slots')
+  if (!days.some((day) => day.slots.length > 0)) {
+    for (const link of window.html.matchAll(/<a\b([^>]*)>/gi)) {
+      if (hasClass(link[1], 'nextpatient-slot-time'))
+        throw new Error('Unrecognized scheduler slots')
+    }
+  }
   return { days, phoneOnly }
 }
 
@@ -220,11 +221,10 @@ const minimumUsualWaitDays = 21
 export function findEarlyOpenings(days: ScheduleDay[], today: string): EarlyOpenings | null {
   const openDates = days.filter((day) => day.slots.length > 0).map((day) => day.date)
   const regularStart =
-    openDates.find(
-      (date) =>
-        openDates.filter((other) => other >= date && other < addDays(date, regularSpanDays))
-          .length >= regularMinOpenDays,
-    ) ?? null
+    openDates.find((date) => {
+      const end = addDays(date, regularSpanDays)
+      return openDates.filter((other) => other >= date && other < end).length >= regularMinOpenDays
+    }) ?? null
   if (regularStart && daysBetween(today, regularStart) < minimumUsualWaitDays) return null
 
   const cutoff = regularStart

@@ -9,7 +9,7 @@ Owner decision (2026-11-15): host the site on Cloudflare Workers and remove it f
 - **No scheduler traffic in the request path.** Pages, `/api/appointments`, and MCP read the latest availability from D1. One cron trigger refreshes one visit type per invocation, using at most about 35 subrequests. Each visit type is due after 4 minutes from 06:00 to 22:00 Mountain Time and after 30 minutes overnight. The backoff after failures is kept, stored in D1. The forced-refresh path goes away; the Refresh button re-reads D1.
 - **Cheaper parsing.** Replace `node-html-parser` with Workers `HTMLRewriter` or plain string scanning. Fetch every window up to the horizon once, with no duplicate first window. Keep the markup-drift error.
 - **Activity logs in D1.** Same fields as the JSONL entries. A daily visitor salt per Denver day is stored in D1 (each isolate keeps its own memory, so an in-memory salt would split visitors), and earlier salts are deleted. A daily cron pass deletes rows older than 180 days. The report reads exported rows with the existing summary code.
-- **CPU.** Keep SSR. If measured CPU on `/` or `/book` regularly exceeds the limit, prerender `/` as a static asset and keep logging by running the Worker first for logged paths.
+- **CPU.** Prerender `/` as a static asset after measured SSR CPU exceeded the Free limit. Run the Worker first for `/` to keep logging, Markdown negotiation, and discovery headers. Keep `/book` dynamic, with appointment links in the initial HTML. Reduce repeated rendering, parsing, and response work, then measure the deployed build again before cutover.
 
 ## Phases
 
@@ -46,7 +46,7 @@ Phase 1 was verified locally before account work. The initial deployment scaffol
 - Approved: Free D1 `drhoodskin`, Worker `drhoodskin`, one cron, and a main-only GitHub `production` environment. No DNS, custom-domain, tunnel, or server changes are approved.
 - Created D1 `drhoodskin` (`788fd598-812f-4933-8334-a56d9d82d385`) with the logged-in local Wrangler CLI. Remote schema installation waits for the deployment job.
 - Confirmed account `862f016642ad509483b546d81fc48f63` is on Workers Free. Existing Workers use one of five account Cron Triggers.
-- The account workers.dev subdomain was `daylilycatalog.workers.dev` until 2026-11-16; it is now `makon.workers.dev`. The intended site URL is `https://drhoodskin.makon.workers.dev`, not yet deployed.
+- The account workers.dev subdomain was `daylilycatalog.workers.dev` until 2026-11-16; it is now `makon.workers.dev`. The site is deployed at `https://drhoodskin.makon.workers.dev`. PR #11's main deployment passed at `cbd992e`; both visit types refreshed from NextPatient and the patient walkthrough passed. CPU validation still blocks cutover.
 - Keep secret values out of source, logs, and chat. The coordinator installs `CLOUDFLARE_API_TOKEN`. The implementation agent can set the non-secret account ID, but must stop at the token prerequisite and must not merge the PR.
 
 ## Template findings

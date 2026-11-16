@@ -13,7 +13,12 @@ export default {
     const pathname = new URL(request.url).pathname
     let status = 500
     try {
-      const result = await handlePublicRequest(request, env.DB, ctx) ?? await handler.fetch(request)
+      let result = await handlePublicRequest(request, env.DB, ctx)
+      if (!result && pathname === '/' && (request.method === 'GET' || request.method === 'HEAD')) {
+        const asset = await env.ASSETS.fetch(request)
+        if (asset.status === 200) result = asset
+      }
+      result ??= await handler.fetch(request)
       const response = new Response(result.body, result)
       if (pathname === '/') {
         for (const value of linkHeaderValues) response.headers.append('Link', value)

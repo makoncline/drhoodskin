@@ -46,6 +46,7 @@ export async function startRuntime({
     assets: {
       directory: './dist/client',
       binding: 'ASSETS',
+      run_worker_first: config.assets.run_worker_first,
       routerConfig: { has_user_worker: true },
     },
     outboundService: fixture.outbound,

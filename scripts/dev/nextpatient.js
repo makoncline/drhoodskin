@@ -62,10 +62,14 @@ export function nextPatientFixture() {
       const times = visit === 'office' ? office : exam
       let next = ''
       let html
-      if (mode === 'slots' || mode === 'horizon') {
+      if (mode === 'slots' || mode === 'horizon' || mode === 'dense') {
         const cells = Array.from({ length: 3 }, (_, i) => {
           const date = addDays(day, i)
-          const labels = mode === 'horizon' ? ['8:40am'] : (times[date] ?? [])
+          const labels = mode === 'dense'
+            ? date >= monday
+              ? ['8am', '8:30am', '9am', '9:30am', '10am', '10:30am', '11am', '11:30am', '1pm', '1:30pm', '2pm', '2:30pm']
+              : []
+            : mode === 'horizon' ? ['8:40am'] : (times[date] ?? [])
           const links = labels.map(
             (time, slot) =>
               `<a class="nextpatient-slot-time" href="/p/5596/${reason}${date.replaceAll('-', '')}${slot}/appt-book?reason_id=${reason}&amp;location_id=5596"><span>${time}</span></a>`,

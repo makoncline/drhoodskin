@@ -46,7 +46,7 @@ Browser tests block external requests. The existing Google Maps iframe is blocke
 
 These screenshots use synthetic appointment times. Do not present them as live availability. Native request logs and activity entries are in `test-results/e2e/*.logs.json`. `.local/requests.jsonl` records local dev logs. Request diagnostics use `X-Correlation-ID`; they exclude query strings, raw bodies, IPs, and raw user agents.
 
-Miniflare does not prove Cloudflare CPU use. Measure `/`, `/book`, and a full cron pass on the Free plan during migration phase 3. Do not replace SSR or enable paid features without a new decision.
+Miniflare does not prove Cloudflare CPU use. Measure `/`, `/book`, and a full cron pass on the Free plan during migration phase 3. The approved homepage fallback prerenders only `/` at build time; its Worker still handles logging, Markdown negotiation, and headers. Keep `/book` server-rendered and do not enable paid features without a new decision.
 
 ## Local reports and Mac poller
 
