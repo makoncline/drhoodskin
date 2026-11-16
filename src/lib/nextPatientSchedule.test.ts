@@ -81,6 +81,35 @@ describe('schedule safety', () => {
     expect(open.slots.map((slot) => slot.minutes)).toEqual([600])
   })
 
+  it('reads on-the-hour times that NextPatient writes without minutes', async () => {
+    const startDay = isoToday()
+    const cells = [
+      '<a class="nextpatient-slot-time" href="https://nextpatient.co/p/5596/333/appt-book?reason_id=56485">3pm</a>',
+      '<a class="nextpatient-slot-time" href="https://nextpatient.co/p/5596/444/appt-book?reason_id=56485">10:30am</a>',
+      '',
+    ].map((links) => `<td class="nextpatient-schedule-day-slots">${links}</td>`)
+    vi.stubGlobal(
+      'fetch',
+      vi.fn((url: string) => {
+        const requested = new URL(url).searchParams.get('day') ?? startDay
+        const html =
+          requested === startDay
+            ? `<table><tr>${cells.join('')}</tr></table>`
+            : '<table><tr><td class="nextpatient-schedule-day-slots nextpatient-schedule-next-available" colspan=3>First available</td></tr></table>'
+        return Promise.resolve(
+          new Response(JSON.stringify({ html, day: requested, next_slot_day: '' })),
+        )
+      }),
+    )
+    const availability = await loadAvailability(56485)
+    const slots =
+      availability.kind === 'slots' ? availability.days.flatMap((entry) => entry.slots) : []
+    expect(slots.map((slot) => [slot.minutes, slot.label])).toEqual([
+      [900, '3:00 PM'],
+      [630, '10:30 AM'],
+    ])
+  })
+
   it('turns booking links into absolute NextPatient links and drops off-site links', async () => {
     const startDay = isoToday()
     const cells = [

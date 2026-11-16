@@ -6,7 +6,7 @@ Deploy to workers.dev first. Do not change DNS, attach a custom domain, change t
 
 Use the official `@cloudflare/vite-plugin` with TanStack Start and Wrangler. `wrangler.jsonc` declares Worker `drhoodskin`, the D1 `DB` binding, one minute cron, `nodejs_compat`, observability, version metadata, and workers.dev. No routes or custom domains are configured. The build generates the deployment configuration in `dist/server/wrangler.json`.
 
-The approved D1 database is `drhoodskin`, ID `788fd598-812f-4933-8334-a56d9d82d385`, in account `862f016642ad509483b546d81fc48f63`. It was created with the logged-in local Wrangler CLI on 2026-11-15. Its remote schema has not yet been installed. The intended URL is `https://drhoodskin.daylilycatalog.workers.dev`; a URL in config does not mean the Worker is deployed.
+The approved D1 database is `drhoodskin`, ID `788fd598-812f-4933-8334-a56d9d82d385`, in account `862f016642ad509483b546d81fc48f63`. It was created with the logged-in local Wrangler CLI on 2026-11-15. Its remote schema has not yet been installed. The intended URL is `https://drhoodskin.makon.workers.dev`; a URL in config does not mean the Worker is deployed.
 
 The Workers dashboard confirmed the Free plan on 2026-11-15. Existing Workers used one of the five account Cron Triggers before this site's deployment. Do not enable a paid plan, paid overages, or additional services.
 
