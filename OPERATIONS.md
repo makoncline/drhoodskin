@@ -61,4 +61,4 @@ For rollback, select a previous known-good published SHA and use the existing se
 
 ## Cloudflare experiment
 
-Keep `docs/cloudflare-migration.md` and useful Git history. Do not import Worker test traffic into real VPS activity logs. After the VPS repair succeeds, disabling only the unused drhoodskin Worker URL/cron can stop the abandoned experiment. Retain D1 and unrelated account credentials until a separate data/resource cleanup decision. Do not alter other Workers or enable billing.
+Keep `docs/cloudflare-migration.md` and useful Git history. Do not import Worker test traffic into real VPS activity logs. On 2026-11-16, with Makon's approval, the abandoned `drhoodskin` Worker's cron trigger and workers.dev URL were turned off, the Cloudflare secrets were removed from this repository's `production` environment, and the dedicated "drhoodskin deploy (GitHub Actions)" API token was deleted. The Worker script and the D1 database `drhoodskin` (test data only) remain, idle and on the Free plan. Delete them only on a separate request. Do not alter other Workers or enable billing.
