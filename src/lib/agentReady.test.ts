@@ -57,6 +57,10 @@ describe('agent-ready surfaces', () => {
     expect(getFaqResult('Is she taking new patients?')).toMatchObject({
       matchedQuestion: 'Is Dr. Hood accepting new patients?',
     })
+    expect(getFaqResult('Is she near Lakewood?')).toMatchObject({
+      matchedQuestion:
+        'Does Dr. Hood see patients from Lakewood, Arvada, and west Denver?',
+    })
 
     const services = getServicesResult('medical')
     expect(services.category).toBe('medical')

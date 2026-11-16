@@ -3,6 +3,8 @@
 // - If a claim loses an official source, remove it instead of guessing.
 // - Keep copy original; do not paste official site prose verbatim.
 // - Do not add awards, review totals, or outcome claims.
+// - reviewSummary paraphrases recurring themes in her Google and Healthgrades
+//   reviews (checked 2026-11-16); keep it to themes those reviews repeat.
 
 export const drHoodVerified = {
   meta: {
@@ -240,6 +242,9 @@ export const drHoodVerified = {
     ],
   },
 
+  reviewSummary:
+    'Patients describe Dr. Hood as thorough and friendly, and say she explains their options without rushing.',
+
   reviews: [
     {
       quote:
@@ -280,6 +285,11 @@ export const drHoodVerified = {
       question: 'Where is the Golden office located?',
       answer:
         'The Golden clinic is at 400 Indiana St #380, Golden, CO 80401 in Red Rocks Medical Center near the NE corner of 6th Avenue and Indiana Street.',
+    },
+    {
+      question: 'Does Dr. Hood see patients from Lakewood, Arvada, and west Denver?',
+      answer:
+        'Yes. The Golden office at 6th Avenue and Indiana Street is a short drive from Lakewood, Wheat Ridge, Arvada, and west Denver, and Dr. Hood is accepting new patients.',
     },
     {
       question: 'What conditions does she treat?',

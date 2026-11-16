@@ -361,6 +361,9 @@ function PatientWords() {
         <h2 id="reviews-heading" className="section-heading">
           What patients say
         </h2>
+        <p className="mt-4 mb-0 max-w-2xl text-lg leading-relaxed text-ink-muted">
+          {content.reviewSummary}
+        </p>
 
         <div className="mt-10 grid gap-10 md:grid-cols-2 md:gap-14">
           {content.reviews.map((review) => (

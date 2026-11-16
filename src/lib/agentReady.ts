@@ -170,6 +170,10 @@ export const faqEntries = content.faq.map((item) => {
     return withSources(item, 'goldenOffice', 'goldenNews')
   }
 
+  if (key.includes('patients from lakewood')) {
+    return withSources(item, 'goldenOffice', 'provider')
+  }
+
   if (key.includes('conditions does she treat')) {
     return withSources(item, 'provider', 'goldenOffice')
   }
