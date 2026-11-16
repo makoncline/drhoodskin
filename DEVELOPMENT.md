@@ -1,60 +1,64 @@
 # Development
 
-Use Node 24 and the pinned pnpm 10.29.2. Work from the repository root.
+Use Node 24.22.3 or a later patched Node 24 and pnpm 10.29.2. Run commands from the repository root.
 
 ```sh
-bash scripts/cloud-setup.sh
+pnpm install --frozen-lockfile
+pnpm browser:install
 pnpm dev
 pnpm check
 ```
 
-Setup installs dependencies and Chromium, then runs the check. Linux needs Chromium's system libraries. CI uses the pinned Playwright container. In a Cloud workspace with a read-only home, set `PATH="$PWD/.local/bin:$PATH"`, `COREPACK_HOME="$PWD/.local/corepack"`, and `PLAYWRIGHT_BROWSERS_PATH="$PWD/.local/browsers"` before setup and in later shells.
+## Built-server development
 
-## Runtime
+`pnpm dev` builds the real Node/Nitro production entry and starts it with a fixture-only outbound fetch preload. Read `.local/ready.json` for the URL, PID, and activity directory. Source changes rebuild and restart on the same port. Reload after the ready message. Stop with Ctrl-C.
 
-`pnpm dev` builds the production entry and runs it in Miniflare. It stores local D1 at `.local/wrangler-d1`. Read `.local/ready.json` for the current URL, PID, and log path. Source changes rebuild and restart on the same port. Reload after the ready message. Stop with Ctrl-C. `pnpm dev:reset` removes local D1 and refuses while the app is running.
+Only NextPatient's read-only schedule requests for this practice, provider, and visit types are replaced. Other outbound server traffic is blocked. No booking links are opened. The fixture runs in a local HTTP service outside application code; its controls are not part of the production bundle.
 
-The local runtime runs the real scheduled handler twice at startup, once for each visit type, then once per minute. NextPatient is replaced only at the outbound fetch boundary. Other outbound Worker traffic is blocked. The fixture accepts only the read-only `schedule.json` URL for this practice, provider, and two reasons. It never follows or opens booking links.
+Local dev activity is stored in `.local/dev-logs`. A restart keeps it. `pnpm dev:reset` refuses while the server is running and moves existing local dev logs to a dated backup. It does not reset the Mac poller's SQLite history.
 
-No Cloudflare, GitHub, or production credentials are needed. Dev and check scripts refuse deployment credentials in the environment. Local development does not deploy or use a remote database. The build uses the official Cloudflare Vite plugin.
+No production credentials or server access are needed for development. The development/check commands refuse deployment secrets in their environment.
 
-## Persistence and tests
+## Checks
 
-Edit `db/schema.ts`, run `pnpm db:generate`, inspect the SQL and snapshot, and commit the migration. Do not edit an applied migration. Wrangler's `migrations_pattern` reads the generated `db/migrations/*/migration.sql` layout. Both E2E setup and production use the real `wrangler d1 migrations apply` command and its `d1_migrations` bookkeeping. E2E uses `--local` with an isolated persistence path, then starts Miniflare against that same D1 storage. The initial migration adds the two due visit rows.
+`pnpm check` runs lint, then the production build and helper/E2E tests, then TypeScript. The E2E harness starts real built Node child processes and real temporary JSONL storage. It replaces only outbound NextPatient requests and blocks unexpected network traffic.
 
-`pnpm check` runs:
+The workflows cover:
 
-1. The Vite+ production build.
-2. Pure helper tests for filtering, early openings, report math, byte limits, and Mac SQLite history.
-3. Eight end-to-end workflows through the built Worker in Miniflare, with real local D1.
-4. TypeScript.
+- Patient navigation, day/time/busy-hour filters, Reset, visit switching, and official scheduler handoff links.
+- Server-rendered appointment links and error fallbacks without JavaScript.
+- REST/MCP parity, discovery surfaces, Markdown negotiation, input errors, and declared/chunked body limits.
+- Shared API/SSR cache reads, cold single-flight loading, dense schedules, markup drift, redirect rejection, and Mac parser/history compatibility.
+- Persisted activity, visitor identity across process restarts, storage failure, and real CLI exports/reports.
 
-The workflows cover public agent surfaces, Markdown and link headers, REST/MCP validation and filter round trips, streamed request limits, allowed events, D1 visitor salts across restarts, retention and exported reports, browser navigation, SSR without JavaScript, cron budgets, backoff, stale data, markup drift, and recovery. Tests seed historical D1 rows only for retention and expiry cases. They do not substitute application code. The Node parser test replaces only the NextPatient fetch boundary and records its result through the real Mac SQLite store.
+Focused helper tests cover fake-clock cache backoff/expiry and real-file retention boundaries without waiting for production time intervals. No application modules or persistence stores are mocked.
 
-HTTP transport rejects false Content-Length before a request reaches the Worker. E2E tests use real declared lengths and chunked bodies. The shared byte-reader tests cover false lengths, exact byte boundaries, and stream cancellation directly.
-
-Browser tests block external requests. The existing Google Maps iframe is blocked rather than simulated, so it is blank in screenshots. All other unexpected requests, page errors, and horizontal overflow fail the check. No appointment booking links are opened.
+Browser tests block external requests, including Google Maps, rather than simulating them. The blank map in screenshots is expected. Unexpected requests, page errors, and horizontal overflow fail the check.
 
 ## Evidence
 
-`test-results/report.json` records the tested Git revision, checks, screenshots, and diagnostic logs. Open these four files before claiming visual completion:
+`test-results/report.json` records the checked revision, dirty-tree flag, results, screenshots, and diagnostic logs. A dirty run is not evidence for an unchanged commit; CI must verify the actual PR/release revision. Open these four files before claiming visual completion:
 
 - `test-results/e2e/home-desktop.png`
 - `test-results/e2e/home-mobile.png`
 - `test-results/e2e/book-desktop.png`
 - `test-results/e2e/book-mobile.png`
 
-These screenshots use synthetic appointment times. Do not present them as live availability. Native request logs and activity entries are in `test-results/e2e/*.logs.json`. `.local/requests.jsonl` records local dev logs. Request diagnostics use `X-Correlation-ID`; they exclude query strings, raw bodies, IPs, and raw user agents.
+These screenshots use synthetic times, not live availability. Keep exports private and out of Git and Docker contexts. Do not publish visitor salts or raw diagnostic data.
 
-Miniflare does not prove Cloudflare CPU use. Measure `/`, `/book`, and a full cron pass on the Free plan during migration phase 3. The approved homepage fallback prerenders only `/` at build time; its Worker still handles logging, Markdown negotiation, and headers. Keep `/book` server-rendered and do not enable paid features without a new decision.
-
-## Local reports and Mac poller
+## Reports and Mac poller
 
 ```sh
-pnpm activity:report --days=7
-pnpm activity:export .local/activity-export.json
+LOG_DIR=.local/dev-logs pnpm activity:report --days=7
+LOG_DIR=.local/dev-logs pnpm activity:export .local/activity-export.json
 pnpm activity:report --file=.local/activity-export.json --days=7 --json
 pnpm availability:report
 ```
 
-The Mac poller remains at `app/scripts/poll-availability.ts`, with local data at `app/.data/availability.sqlite`. Its existing launchd command remains valid. It imports the same parser as the Worker and runs on Node 24 without a DOM library. Do not move its data or change its launchd job in this phase. `pnpm availability:poll` performs a real read-only poll; local checks never run it.
+The export command writes a new mode-0600 JSON array and refuses to overwrite an existing file. Without `LOG_DIR`, report/export commands read `.data/logs`.
+
+The Mac poller remains at `app/scripts/poll-availability.ts` and uses `app/.data/availability.sqlite`. Its launchd job is unchanged. `pnpm availability:poll` performs real read-only requests; checks do not run it.
+
+## Hosting boundaries
+
+The UI, portable parser, HTTP contracts, byte reader, report calculations, and external-service fixtures can support another host later. Node persistence and the process cache are isolated in their own modules. The current app has no D1, Miniflare, Wrangler, or alternate Worker runtime. Historical Cloudflare findings remain in `docs/cloudflare-migration.md` and Git history.

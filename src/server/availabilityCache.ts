@@ -1,7 +1,3 @@
-import { env } from 'cloudflare:workers'
-import { eq } from 'drizzle-orm'
-import { drizzle } from 'drizzle-orm/d1'
-import { availability } from '../../db/schema'
 import { loadAvailability, visitReasons } from '../lib/nextPatientSchedule'
 import type { Availability } from '../lib/nextPatientSchedule'
 
@@ -16,60 +12,66 @@ const reasons: Record<CachedVisit, number> = {
   office: visitReasons.office,
   'full-body-exam': visitReasons.fullBodyExam,
 }
+const freshMs = 2 * 60_000
 const maxStaleMs = 6 * 60 * 60_000
-const hourFormatter = new Intl.DateTimeFormat('en-US', {
-  timeZone: 'America/Denver',
-  hour: 'numeric',
-  hourCycle: 'h23',
+const minForcedRefreshMs = 60_000
+const initialRetryMs = 60_000
+const maxRetryMs = 15 * 60_000
+
+type RefreshFailure = { retryAt: number; delayMs: number; error: unknown }
+type AvailabilityState = {
+  entries: Map<CachedVisit, CachedAvailability>
+  pending: Map<CachedVisit, Promise<CachedAvailability>>
+  failures: Map<CachedVisit, RefreshFailure>
+}
+const runtime = globalThis as typeof globalThis & { drHoodAvailability?: AvailabilityState }
+// Nitro emits separate handler and SSR bundles in the same process.
+const { entries, pending, failures } = (runtime.drHoodAvailability ??= {
+  entries: new Map(),
+  pending: new Map(),
+  failures: new Map(),
 })
 
-export async function cachedAvailability(visit: CachedVisit): Promise<CachedAvailability> {
-  const [row] = await drizzle(env.DB)
-    .select()
-    .from(availability)
-    .where(eq(availability.visit, visit))
-  if (!row?.snapshot || row.checkedAt === null || Date.now() - row.checkedAt >= maxStaleMs)
-    throw new Error('Open times could not be loaded.')
-  return {
-    checkedAt: row.checkedAt,
-    availability: row.snapshot,
-    ...(row.error ? { refreshFailed: true } : {}),
-  }
+function refresh(visit: CachedVisit) {
+  const running = pending.get(visit)
+  if (running) return running
+  const request = loadAvailability(reasons[visit])
+    .then((availability) => {
+      const entry = { checkedAt: Date.now(), availability }
+      entries.set(visit, entry)
+      failures.delete(visit)
+      return entry
+    })
+    .catch((error: unknown) => {
+      const previous = failures.get(visit)
+      const delayMs = previous ? Math.min(previous.delayMs * 2, maxRetryMs) : initialRetryMs
+      failures.set(visit, { retryAt: Date.now() + delayMs, delayMs, error })
+      console.error(
+        `[availability] ${visit}: ${error instanceof Error ? error.message : String(error)}`,
+      )
+      throw error
+    })
+    .finally(() => pending.delete(visit))
+  pending.set(visit, request)
+  return request
 }
 
-export async function refreshDueAvailability(db: D1Database, now: number) {
-  const row = await db
-    .prepare(
-      'UPDATE availability SET due_at = ? WHERE visit = (SELECT visit FROM availability WHERE due_at <= ? ORDER BY due_at, visit LIMIT 1) RETURNING visit, retry_ms',
-    )
-    .bind(now + 3 * 60_000, now)
-    .first<{ visit: CachedVisit; retry_ms: number }>()
-  if (!row) return
-  try {
-    const snapshot = await loadAvailability(reasons[row.visit])
-    const hour = Number(hourFormatter.format(new Date(now)))
-    const interval = hour >= 6 && hour < 22 ? 4 * 60_000 : 30 * 60_000
-    await drizzle(db)
-      .update(availability)
-      .set({
-        snapshot,
-        checkedAt: now,
-        dueAt: now + interval,
-        retryMs: 0,
-        error: null,
-      })
-      .where(eq(availability.visit, row.visit))
-  } catch (error) {
-    const retryMs = Math.min(row.retry_ms ? row.retry_ms * 2 : 60_000, 15 * 60_000)
-    const message = error instanceof Error ? error.message : 'Schedule request failed'
-    await drizzle(db)
-      .update(availability)
-      .set({
-        dueAt: now + retryMs,
-        retryMs,
-        error: message,
-      })
-      .where(eq(availability.visit, row.visit))
-    console.error(`[availability] ${row.visit}: ${message}`)
+export async function cachedAvailability(
+  visit: CachedVisit,
+  { fresh = false } = {},
+): Promise<CachedAvailability> {
+  const entry = entries.get(visit)
+  const age = entry ? Date.now() - entry.checkedAt : Number.POSITIVE_INFINITY
+  const failure = failures.get(visit)
+  if (failure && Date.now() < failure.retryAt) {
+    if (entry && age < maxStaleMs) return { ...entry, refreshFailed: true }
+    throw failure.error
   }
+  if (entry && fresh && age < minForcedRefreshMs) return entry
+  if (entry && !fresh && age < freshMs) return entry
+  if (entry && !fresh && age < maxStaleMs) {
+    void refresh(visit).catch(() => undefined)
+    return entry
+  }
+  return refresh(visit)
 }

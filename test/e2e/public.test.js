@@ -1,23 +1,24 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
-import { readFileSync } from 'node:fs'
-import { start, eventually } from './harness.js'
+import { start, eventually, activityRows } from './harness.js'
 import { addDays } from '../../src/lib/nextPatientSchedule.ts'
 
 const calendar = 'https://nextpatient.co/p/5596/60744/appointments'
 
 test('public-agent-and-appointment-boundaries', async (t) => {
-  const { runtime: r, json, rpc, warm } = await start(t)
+  const { runtime: r, json, rpc } = await start(t)
   const home = await r.dispatch('/')
   assert.equal(home.status, 200)
   assert.match(home.headers.get('link'), /openapi/)
   assert.ok(home.headers.get('x-correlation-id'))
-  const staticHome = readFileSync('dist/client/index.html', 'utf8')
-  assert.match(staticHome, /Dr\. Hood/)
-  assert.equal(await home.text(), staticHome)
+  assert.match(await home.text(), /Dr\. Hood/)
   const homeWithQuery = await r.dispatch('/?utm_source=fixture')
-  assert.equal(await homeWithQuery.text(), staticHome)
-  assert.notEqual(homeWithQuery.headers.get('x-correlation-id'), home.headers.get('x-correlation-id'))
+  assert.equal(homeWithQuery.status, 200)
+  assert.match(await homeWithQuery.text(), /Dr\. Hood/)
+  assert.notEqual(
+    homeWithQuery.headers.get('x-correlation-id'),
+    home.headers.get('x-correlation-id'),
+  )
   const head = await r.dispatch('/', { method: 'HEAD' })
   assert.equal(head.status, 200)
   assert.equal(await head.text(), '')
@@ -72,12 +73,10 @@ test('public-agent-and-appointment-boundaries', async (t) => {
   assert.ok(unknownFn.status >= 400)
   assert.doesNotMatch(unknownFn.headers.get('content-type') ?? '', /text\/html/)
 
-  await json('/api/appointments', 502)
-  assert.equal((await rpc('tools/call', { name: 'find_appointments' })).result.isError, true)
   assert.equal(r.fixture.requests.length, 0)
-  await warm()
-  const requests = r.fixture.requests.length
   const first = await json('/api/appointments')
+  assert.ok(r.fixture.requests.length > 0, 'A normal GET warms the in-process cache')
+  const requests = r.fixture.requests.length
   assert.equal(first.visit, 'office')
   assert.equal(first.timeZone, 'America/Denver')
   assert.equal(first.status, 'open')
@@ -206,16 +205,16 @@ test('public-agent-and-appointment-boundaries', async (t) => {
   }
   assert.equal((await r.dispatch('/mcp')).status, 405)
   await eventually(
-    () => r.db.prepare("SELECT tool, via FROM activity WHERE k = 'mcp'").all(),
-    ({ results }) => {
-      assert.ok(results.some((row) => row.tool === 'get_office_details' && row.via === 'webmcp'))
-      assert.ok(results.every((row) => row.tool !== 'unknown_tool'))
+    () => activityRows(r).filter((row) => row.k === 'mcp'),
+    (rows) => {
+      assert.ok(rows.some((row) => row.tool === 'get_office_details' && row.via === 'webmcp'))
+      assert.ok(rows.every((row) => row.tool !== 'unknown_tool'))
     },
   )
   assert.equal(
     r.fixture.requests.length,
     requests,
-    'Pages, APIs, and tools must never refresh NextPatient',
+    'Pages, APIs, and tools reuse the fresh availability cache',
   )
 })
 
@@ -246,7 +245,7 @@ test('limited-bodies-and-allowed-events', async (t) => {
   ]) {
     const declared = await r.dispatch(path, {
       method: 'POST',
-      headers: { 'content-length': String(max + 1) },
+      headers: { 'content-length': String(max + 1), connection: 'close' },
       body: 'x'.repeat(max + 1),
     })
     assert.equal(declared.status, 413)
@@ -257,16 +256,18 @@ test('limited-bodies-and-allowed-events', async (t) => {
         if (++sent > max / 512 + 4) controller.close()
       },
     })
-    const response = await r.dispatch(path, { method: 'POST', body, duplex: 'half' })
+    const response = await r.dispatch(path, {
+      method: 'POST',
+      headers: { connection: 'close' },
+      body,
+      duplex: 'half',
+    })
     assert.equal(response.status, 413, path)
   }
   await eventually(
-    () => r.db.prepare('SELECT * FROM activity').all(),
-    ({ results }) => {
-      assert.deepEqual(results.map((row) => row.e).sort(), [
-        'book_page_view',
-        'hero_book_page_click',
-      ])
+    () => activityRows(r),
+    (rows) => {
+      assert.deepEqual(rows.map((row) => row.e).sort(), ['book_page_view', 'hero_book_page_click'])
     },
   )
   assert.equal(r.fixture.requests.length, 0)

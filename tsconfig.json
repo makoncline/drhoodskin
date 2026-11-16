@@ -13,7 +13,7 @@
     "esModuleInterop": true,
     "resolveJsonModule": true,
     "allowImportingTsExtensions": true,
-    "types": ["vite-plus/client", "@cloudflare/workers-types", "node"]
+    "types": ["vite-plus/client", "node"]
   },
   "include": [
     "src/**/*.ts",
@@ -22,7 +22,6 @@
     "scripts/*.ts",
     "vite.config.ts",
     "helpers.config.ts",
-    "drizzle.config.ts",
-    "db/schema.ts"
+    "server.ts"
   ]
 }

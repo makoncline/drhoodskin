@@ -1,4 +1,12 @@
-# Move drhoodskin.com to Cloudflare Workers
+# Cloudflare experiment: stopped; shared work retained
+
+**Status, 2026-11-16:** Makon chose to keep the site on the VPS and build its private images in GitHub Actions. The live domain, tunnel, Caddy route, and production JSONL logs never moved. No paid Cloudflare plan is authorized. Read AGENTS.md, DEVELOPMENT.md, and OPERATIONS.md for the active Node runtime and VPS release process.
+
+The root-layout UI, DOM-free parser (including the on-the-hour fix), date-formatting improvements, standard Request/Response API handlers, byte limits, activity/report calculations, and fixture-driven browser/API tests are retained and used by the Node app. Node persistence and caching are isolated in separate modules. Unused Worker/D1 build configuration is removed rather than maintained as a second runtime. The D1 schema and original Worker implementation remain recoverable from Git history at `b7022aa`.
+
+The sections below record the experiment, not current deployment instructions. A future Free Worker deployment must resolve booking SSR and full-refresh CPU limits before committing to a port. The successful workers.dev release at `5a5e068` fixed homepage CPU but still showed repeated booking/cron overruns in sampled telemetry; all sampled outcomes were `ok`, which did not prove adequate margin. Do not recommend a paid plan or restart the migration without a new owner decision.
+
+## Historical plan
 
 Owner decision (2026-11-15): host the site on Cloudflare Workers and remove it from makon-dev-0. On-server Docker builds OOM-killed other production apps twice on 2026-11-15. The site is not critical infrastructure; short outages during the move are acceptable.
 

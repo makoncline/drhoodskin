@@ -1,71 +1,56 @@
 # Operations
 
-Deploy to workers.dev first. Do not change DNS, attach a custom domain, change the tunnel, or stop the existing server until a separate cutover approval. Follow [the migration plan](docs/cloudflare-migration.md).
+## Current hosting decision
 
-## Stack and resources
+Production stays on makon-dev-0 at `/srv/stacks/drhoodskin`. The live domain never moved to the experimental Worker. Do not change DNS, Caddy, or the tunnel for this repair. No paid Cloudflare plan is authorized.
 
-Use the official `@cloudflare/vite-plugin` with TanStack Start and Wrangler. `wrangler.jsonc` declares Worker `drhoodskin`, the D1 `DB` binding, the `ASSETS` binding, one minute cron, `nodejs_compat`, observability, version metadata, and workers.dev. The build prerenders only `/`. Its requests run through the Worker before the static HTML is served, so logs, agent headers, and Markdown negotiation still work. `/book` remains dynamic. No routes or custom domains are configured. The build generates the deployment configuration in `dist/server/wrangler.json`.
+Build images in GitHub Actions, not on this 2 GB VPS. On-server builds previously caused other production apps to be OOM-killed. The VPS must only pull and run prebuilt images.
 
-The approved D1 database is `drhoodskin`, ID `788fd598-812f-4933-8334-a56d9d82d385`, in account `862f016642ad509483b546d81fc48f63`. It was created with the logged-in local Wrangler CLI on 2026-11-15. Its remote schema is installed. The Worker is deployed at `https://drhoodskin.makon.workers.dev`; PR #11's main deployment passed at `cbd992e`. Patient and agent checks passed, but measured CPU still blocks live-domain cutover.
+## Runtime contract
 
-The Workers dashboard confirmed the Free plan on 2026-11-15. Existing Workers used one of the five account Cron Triggers before this site's deployment. Do not enable a paid plan, paid overages, or additional services.
+- Image: `ghcr.io/makoncline/drhoodskin:<full commit SHA>`, private.
+- Node: patched 24, pinned to 24.22.3 in Docker and CI; pnpm 10.29.2.
+- Entry: `node .output/server/index.mjs`.
+- Internal host/port: `0.0.0.0:3000`, on the existing `edge` network with alias `drhoodskin`.
+- Volume: `./data:/app/data`; `LOG_DIR=/app/data/logs`. Never remove this volume.
+- Memory and swap ceilings: 256 MiB each. Docker stdout logs rotate at 10 MB across three files.
+- Responses include `X-Correlation-ID` and `X-Release`. The release header is the build revision, not proof of an image digest; inspect the running image for that.
 
-## GitHub deployment setup
+The app shares one availability cache between Nitro's API and SSR bundles. It uses two-minute freshness, single-flight refresh, a six-hour stale ceiling, a sixty-second manual-refresh floor, and per-visit exponential retry backoff capped at fifteen minutes. Refresh does not depend on an external cron or database service. Expired appointment starts are filtered before they are offered.
 
-Use the repository's `production` environment with a custom deployment branch policy allowing `main` only. It needs these environment secrets:
+## Private registry authentication
 
-- `CLOUDFLARE_ACCOUNT_ID`: the public account ID above.
-- `CLOUDFLARE_API_TOKEN`: a token with Worker script and D1 write access for this account. The coordinator collects and installs it. Never read, print, or copy its value into source, logs, or chat.
+The owner-approved pull-only GitHub token is stored in an app-specific Docker configuration at `/srv/stacks/drhoodskin/.docker`, with directory mode 0700. The credential source is in the owner's 1Password; keep its item identifier and token out of this public repository.
 
-Check the Actions spending limit remains $0. Do not broaden the environment's deployment policy to get a branch deployment through.
+Set `DOCKER_CONFIG=/srv/stacks/drhoodskin/.docker` for this app's pulls and in `/etc/bootstrap/deploy-hooks/drhoodskin.env`. Do not change another app's Docker credentials. Registry credentials, `.env` files, Mac `.data`, SQLite files, logs, and local artifacts must never enter the build context or GHA cache.
 
-The implementation agent must stop when the API token is needed. After the coordinator installs it, open the `cf-migration` PR, wait for CI, and stop before merging. The coordinator reviews and merges.
+A new GHCR package is private by default. After publication, CI tries to read the image with no credentials; if that succeeds, the image is public and the job fails before deploy. Do not change the repository's visibility or make the package public.
 
-## Release
+## Image pipeline
 
-The **Check and deploy** workflow follows the grunge deployment shape:
+`.github/workflows/deploy.yml` runs verification before the image job. PRs build and test an unpushed image without registry login or production secrets. Main releases publish the exact tested image once per commit-SHA tag through `GITHUB_TOKEN`. Reruns pull, test, and reuse an already published image instead of replacing the tag. Publication checks again for a tag created during the build and refuses to overwrite it. Third-party Actions and the Node base image are pinned by commit SHA/digest. Record the published digest.
 
-1. Pull requests, pushes to `main`, and manual dispatch run `pnpm check` without deployment secrets.
-2. Only a non-PR run on `main` enters the protected `production` environment.
-3. The job builds with the official Cloudflare adapter.
-4. It runs `pnpm exec wrangler d1 migrations apply drhoodskin --remote`.
-5. It runs `pnpm exec wrangler deploy`.
-6. It runs `node scripts/live-check.js` against the workers.dev URL.
+The image runs public-boundary smoke checks under the same 256 MiB limit used in production, including dense fixtures for both visit types, REST loading, and server-rendered booking links sharing the API cache. The Docker build also checks the Node runtime and built server. These checks do not contact NextPatient or open booking links.
 
-Tests run in the pinned Playwright container. That job marks exactly `$GITHUB_WORKSPACE` as a Git safe directory. Deployment credentials are scoped to the migration and deploy steps, not the build or check steps. CI keeps the local check report, screenshots, logs, and live-check output as artifacts.
+The protected deployment job runs only on current `main`, in the GitHub `production` environment. It sends `DEPLOY_WEBHOOK_TOKEN` only to `https://deploy.makon.dev/deploy/drhoodskin`. It skips superseded releases, waits for image verification, serializes deployments without cancelling one in flight, and then checks live patient/agent boundaries and the expected `X-Release` header.
 
-The live check never opens an `appt-book` link. A new D1 starts empty; it waits up to three minutes for initial cron-fed availability. New cron configuration can take time to propagate. If the check still fails, inspect cron delivery and NextPatient egress before retrying. Do not add a request-path fetch to fill the cache.
+## First image-based rollout
 
-After the first successful deploy, inspect the pages and agent surfaces on workers.dev, verify both visit types refresh, measure CPU, and confirm an unattended repeat deploy. Do not change DNS until those checks pass and cutover is approved.
+1. Inspect the installed `/usr/local/bin/bootstrap-compose-deploy.sh` and current stack before changes. The installed script differs from the bootstrap repository: it pulls during rollback and its update command does not explicitly pass `--no-build`.
+2. Preserve the current image ID and original Compose/environment files. The original image at preflight was `sha256:ff06f875eab779bbf7b6d4a0834928bdd8350540156d137883742ff42312f91e`, running source `5f2516241713f1d6ce3e3ed2a87abe876b8c8ec2`; verify these before use. Keep the uncommitted server `logs.md` changes.
+3. Wait for a verified, privately published image. Use the app-specific registry login to pull it. Stage only reviewed Compose/environment files; do not pull the Worker source tree into this live stack or install dependencies there.
+4. Apply the image-only Compose with `docker compose up -d --no-build --pull never`. If it fails checks, restore the original Compose/environment and start the preserved local image with the same no-build/no-pull flags. Do not depend on an unpublished registry tag for the first rollback.
+5. Verify the running image/digest, memory limit, retained data mount, release header, both appointment types, browser flow, REST/MCP, and activity/report persistence.
+6. Only after this successful baseline, register the `drhoodskin` webhook target with the new published SHA already in `.env`. Use a separate empty deploy-cache directory, never the log/data directory. Disable image pruning during this first rollout. Re-run the approved deployment job to prove the unattended repeat release.
 
-## Schema and local runtime
+Registering the target only after the image-only baseline prevents the webhook from seeing the old build-based Compose. The first main image publication can precede target setup; do not treat a missing target as permission to build on the VPS.
 
-Edit `db/schema.ts`, run `pnpm db:generate`, and inspect the generated SQL and snapshot. Wrangler uses `migrations_dir: db/migrations` and `migrations_pattern: db/migrations/*/migration.sql` for the Drizzle directory layout. Do not edit an applied migration.
+## Normal release and rollback
 
-Local development and E2E run Wrangler's real `d1 migrations apply --local` command before starting the built Worker in Miniflare. They share the same D1 ID and persistence layout. Local data is in `.local/wrangler-d1`; no remote database is used by checks. Earlier phase-1 fixture data is left in `.local/fixture-d1` and is not imported.
+After bootstrap, a tested main release publishes its image, calls the existing webhook, and runs the live checks. The server should never need application source or dependencies for an image release. Compose changes remain a separate reviewed configuration update; a new image tag does not synchronize Compose automatically.
 
-## Availability and Free limits
+For rollback, select a previous known-good published SHA and use the existing server deployment command for the `drhoodskin` target. Confirm the private registry credential works, the earlier image is available, and the log volume remains mounted. Do not use an old workflow rerun to bypass the current-main guard. Retain the first local image/configuration backup until repeat deployment and rollback are verified.
 
-Requests never contact NextPatient. `/book`, REST, and MCP read D1 and discard expired slots. A cached snapshot is usable for less than six hours. `/book` Refresh only re-reads D1.
+## Cloudflare experiment
 
-One cron invocation claims one due visit row atomically. Success is due after four minutes from 06:00 to 22:00 America/Denver, or thirty minutes overnight. Failure keeps the previous snapshot and persists its error. Retry delay starts at one minute, doubles, and stops at fifteen minutes. Success resets backoff. A three-minute claim lease prevents overlapping invocations from selecting the same visit during its fetches.
-
-The parser scans the observed 92-day horizon with at most 31 external reads and six concurrent fetches. It does not follow redirects or open booking links. Markup drift remains an error.
-
-Workers Free has a 10 ms CPU budget, 50 external subrequests, six concurrent outbound connections, 50 D1 queries per invocation, and shared daily request quotas. Local tests enforce fetch counts and concurrency, not production CPU. Measure SSR and the largest cron pass after deployment. Measured SSR CPU exceeded the limit, so `/` now uses the approved static prerender fallback. Keep `/book` server-rendered, and measure all paths and full cron passes again after deploying an optimization. Do not enable paid features as a fix.
-
-## Activity and diagnosis
-
-Activity is stored in D1 with the old report fields. Denver-day salts and daily retention state are shared across isolates. See [activity logs and reports](docs/activity-logs.md).
-
-Responses return `X-Correlation-ID`. Request diagnostics log service, release, normalized route, method, status, and elapsed wall time, without query strings, raw bodies, IPs, or raw user agents. Native platform logs can contain request metadata; inspect exports before sharing. Free telemetry has finite retention and is not the activity store.
-
-No account error monitor is created by this setup. Any later monitor needs separate resource approval and must use Free features.
-
-## Recovery
-
-Until decommissioning, the old server and tunnel remain installed. An approved cutover rollback can restore the old tunnel hostname and start the installed container. Do not rebuild on the small server as part of this port.
-
-For a Worker code failure, use `pnpm exec wrangler rollback` in an authorized operations context. Check schema compatibility first. Code rollback does not restore D1 data.
-
-D1 Time Travel on Free retains seven days. A restore discards later writes and needs explicit approval for that loss. Save a current bookmark/export, stop writes, inspect the target bookmark, restore, verify the site, and save the undo bookmark. Prefer forward SQL migrations for routine fixes. Never use production for a restore drill.
+Keep `docs/cloudflare-migration.md` and useful Git history. Do not import Worker test traffic into real VPS activity logs. After the VPS repair succeeds, disabling only the unused drhoodskin Worker URL/cron can stop the abandoned experiment. Retain D1 and unrelated account credentials until a separate data/resource cleanup decision. Do not alter other Workers or enable billing.

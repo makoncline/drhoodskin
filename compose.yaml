@@ -1,0 +1,24 @@
+services:
+  drhoodskin:
+    image: ghcr.io/makoncline/drhoodskin:${IMAGE_TAG:?set IMAGE_TAG in .env}
+    restart: unless-stopped
+    mem_limit: 256m
+    memswap_limit: 256m
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+    environment:
+      PORT: 3000
+      LOG_DIR: /app/data/logs
+    volumes:
+      - ./data:/app/data
+    networks:
+      edge:
+        aliases:
+          - drhoodskin
+
+networks:
+  edge:
+    external: true

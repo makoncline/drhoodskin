@@ -12,6 +12,8 @@ async function check(path, init, status = 200) {
   })
   assert.equal(response.status, status, path)
   assert.ok(response.headers.get('x-correlation-id'), path)
+  if (process.env.EXPECTED_REVISION)
+    assert.equal(response.headers.get('x-release'), process.env.EXPECTED_REVISION, path)
   checks.push({ path, status: response.status })
   return response
 }

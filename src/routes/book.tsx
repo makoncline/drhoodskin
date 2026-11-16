@@ -1,13 +1,6 @@
 import { createFileRoute, useNavigate, useRouter } from '@tanstack/react-router'
 import { useEffect, useMemo, useRef, useState } from 'react'
-import {
-  ArrowUpRight,
-  Check,
-  ChevronDown,
-  Phone,
-  RotateCcw,
-  RotateCw,
-} from 'lucide-react'
+import { ArrowUpRight, Check, ChevronDown, Phone, RotateCcw, RotateCw } from 'lucide-react'
 import { drHoodVerified } from '../content/drHoodVerified'
 import { trackEvent } from '../lib/analytics'
 import { OfficeStatus } from '../components/OfficeStatus'
@@ -23,12 +16,7 @@ import {
   weekdayOf,
   weekdays,
 } from '../lib/appointmentSearch'
-import type {
-  AppointmentFilter,
-  Opening,
-  TimeBandId,
-  WeekdayCode,
-} from '../lib/appointmentSearch'
+import type { AppointmentFilter, Opening, TimeBandId, WeekdayCode } from '../lib/appointmentSearch'
 import {
   addDays,
   daysBetween,
@@ -61,7 +49,6 @@ export const Route = createFileRoute('/book')({
     }
   },
   loader: () => getSchedulerData(),
-  onEnter: () => trackEvent('book_page_view'),
   shouldReload: false,
   pendingComponent: LoadingState,
   head: () => {
@@ -69,10 +56,7 @@ export const Route = createFileRoute('/book')({
     const description =
       'Open appointment times with board-certified dermatologist Dr. Channing Hood at U.S. Dermatology Partners Golden. Pick a time and confirm on the official booking page.'
     const url = new URL('/book', content.seo.canonical).toString()
-    const image = new URL(
-      content.identity.shareImageSrc,
-      content.seo.canonical,
-    ).toString()
+    const image = new URL(content.identity.shareImageSrc, content.seo.canonical).toString()
     return {
       meta: [
         { title },
@@ -127,9 +111,7 @@ function describeAvoid(avoid: string[]) {
 
 function describePageFilter(filter: PageFilter) {
   const base = describeFilter(filter)
-  return filter.avoid.length > 0
-    ? `${base}, not ${describeAvoid(filter.avoid)}`
-    : base
+  return filter.avoid.length > 0 ? `${base}, not ${describeAvoid(filter.avoid)}` : base
 }
 
 function live(data: VisitData): VisitData {
@@ -233,7 +215,7 @@ function SchedulerConcept() {
   const refresh = async () => {
     setRefreshing(true)
     try {
-      const result = await getSchedulerData()
+      const result = await getSchedulerData({ data: { fresh: true } })
       await router.invalidate()
       setRefreshFailures({
         office: !result.office || result.office.refreshFailed === true,
@@ -293,8 +275,7 @@ function SchedulerConcept() {
             },
           },
           execute: (input) => {
-            const nextVisit: Visit =
-              input?.visit === 'full-body-exam' ? 'exam' : 'office'
+            const nextVisit: Visit = input?.visit === 'full-body-exam' ? 'exam' : 'office'
             const nextFilter: PageFilter = {
               ...parseFilter(input ?? {}),
               avoid: normalizeAvoid(input?.avoid),
@@ -302,9 +283,7 @@ function SchedulerConcept() {
             page.current.setVisit(nextVisit)
             page.current.setFilter(nextFilter)
             const source =
-              nextVisit === 'office'
-                ? page.current.loaded.office
-                : page.current.loaded.exam
+              nextVisit === 'office' ? page.current.loaded.office : page.current.loaded.exam
             const found = searchOpenings(
               openDays(source),
               nextFilter,
@@ -360,18 +339,14 @@ function SchedulerConcept() {
               filter={filter}
               otherSoonest={soonestOf(other)}
               onClearFilter={() => setFilter(noFilter)}
-              onSwitchVisit={() =>
-                setVisit(visit === 'office' ? 'exam' : 'office')
-              }
+              onSwitchVisit={() => setVisit(visit === 'office' ? 'exam' : 'office')}
             />
           </>
         ) : null}
         {data !== null ? (
           <CheckedAt
             checkedAt={data.checkedAt}
-            refreshFailed={
-              refreshFailures[visit] || data.refreshFailed === true
-            }
+            refreshFailed={refreshFailures[visit] || data.refreshFailed === true}
             refreshing={refreshing}
             onRefresh={refresh}
           />
@@ -399,8 +374,7 @@ function Intro() {
           Book with Dr. Hood
         </h1>
         <p className="m-0 text-[0.98rem] leading-snug text-ink-muted">
-          Board-certified dermatologist in Golden. New patients, adults and
-          children.{' '}
+          Board-certified dermatologist in Golden. New patients, adults and children.{' '}
           <a href="/" className="text-link">
             About
           </a>{' '}
@@ -451,16 +425,10 @@ function VisitPicker({
                 onChange={() => onChange(option.value)}
                 className="sr-only"
               />
-              <span className="leading-snug font-semibold">
-                {visitLabels[option.value]}
-              </span>
-              <span className="text-sm leading-snug text-ink-muted">
-                {option.detail}
-              </span>
+              <span className="leading-snug font-semibold">{visitLabels[option.value]}</span>
+              <span className="text-sm leading-snug text-ink-muted">{option.detail}</span>
               <span className="mt-1 text-sm font-semibold text-ink">
-                {soonest
-                  ? `Next: ${shortDate(soonest.date)}`
-                  : 'Call to schedule'}
+                {soonest ? `Next: ${shortDate(soonest.date)}` : 'Call to schedule'}
               </span>
             </label>
           )
@@ -494,25 +462,17 @@ function Chip({
     >
       <span className="flex items-center gap-1 font-semibold">
         {pressed ? (
-          <Check
-            aria-hidden="true"
-            className="h-3.5 w-3.5 text-action"
-            strokeWidth={3}
-          />
+          <Check aria-hidden="true" className="h-3.5 w-3.5 text-action" strokeWidth={3} />
         ) : null}
         {label}
       </span>
-      {sublabel ? (
-        <span className="text-xs text-ink-muted">{sublabel}</span>
-      ) : null}
+      {sublabel ? <span className="text-xs text-ink-muted">{sublabel}</span> : null}
     </button>
   )
 }
 
 function toggle<T>(list: T[], item: T) {
-  return list.includes(item)
-    ? list.filter((value) => value !== item)
-    : [...list, item]
+  return list.includes(item) ? list.filter((value) => value !== item) : [...list, item]
 }
 
 function AvailabilityPanel({
@@ -545,9 +505,7 @@ function AvailabilityPanel({
             <span className="block text-sm font-semibold text-ink-muted">
               When can you come in?
             </span>
-            <span className="block truncate font-semibold">
-              {describePageFilter(filter)}
-            </span>
+            <span className="block truncate font-semibold">{describePageFilter(filter)}</span>
           </span>
           <span className="flex shrink-0 items-center gap-1 text-sm font-semibold text-action">
             {filtered ? 'Change' : 'Choose'}
@@ -572,11 +530,7 @@ function AvailabilityPanel({
         ) : null}
       </div>
       <div id="availability-options" hidden={!open} className="pb-4">
-        <div
-          className="grid grid-cols-5 gap-1.5"
-          role="group"
-          aria-label="Days"
-        >
+        <div className="grid grid-cols-5 gap-1.5" role="group" aria-label="Days">
           {pickerDays.map((day) => (
             <Chip
               key={day.code}
@@ -591,11 +545,7 @@ function AvailabilityPanel({
             />
           ))}
         </div>
-        <div
-          className="mt-2 grid grid-cols-2 gap-1.5"
-          role="group"
-          aria-label="Times"
-        >
+        <div className="mt-2 grid grid-cols-2 gap-1.5" role="group" aria-label="Times">
           {timeBands.map((band) => (
             <Chip
               key={band.id}
@@ -625,9 +575,7 @@ function AvailabilityPanel({
         ) : null}
         <p className="mt-3 mb-0 text-sm text-ink-muted">
           Pick none to see every time.
-          {hours
-            ? ` Dr. Hood’s times run ${hours.first} to ${hours.last}.`
-            : ''}
+          {hours ? ` Dr. Hood’s times run ${hours.first} to ${hours.last}.` : ''}
         </p>
       </div>
     </section>
@@ -667,17 +615,12 @@ function OpenTimes({
     () => searchOpenings(days, filter, today, parseAvoid(filter.avoid)),
     [days, filter, today],
   )
-  const matchingDays = useMemo(
-    () => groupByDay(search.matches),
-    [search.matches],
-  )
+  const matchingDays = useMemo(() => groupByDay(search.matches), [search.matches])
   const [selected, setSelected] = useState<string | null>(null)
-  const day =
-    matchingDays.find((group) => group.date === selected) ?? matchingDays.at(0)
+  const day = matchingDays.find((group) => group.date === selected) ?? matchingDays.at(0)
   const thisSoonest = search.soonest
   const otherIsSooner =
-    otherSoonest !== null &&
-    (thisSoonest === null || otherSoonest.date < thisSoonest.date)
+    otherSoonest !== null && (thisSoonest === null || otherSoonest.date < thisSoonest.date)
 
   return (
     <>
@@ -728,19 +671,12 @@ type StripItem =
   | { kind: 'day'; date: string; count: number }
   | { kind: 'gap'; from: string; to: string; full: boolean }
 
-function stripItems(
-  days: ScheduleDay[],
-  matchingDays: DayGroup[],
-): StripItem[] {
+function stripItems(days: ScheduleDay[], matchingDays: DayGroup[]): StripItem[] {
   const first = days.find((day) => day.slots.length > 0)?.date
   const last = days.at(-1)?.date
   if (!first || !last) return []
-  const openDates = new Set(
-    days.filter((day) => day.slots.length > 0).map((day) => day.date),
-  )
-  const counts = new Map(
-    matchingDays.map((day) => [day.date, day.slots.length]),
-  )
+  const openDates = new Set(days.filter((day) => day.slots.length > 0).map((day) => day.date))
+  const counts = new Map(matchingDays.map((day) => [day.date, day.slots.length]))
   const items: StripItem[] = []
   let closed: string[] = []
   const flush = () => {
@@ -751,10 +687,7 @@ function stripItems(
         to: closed[closed.length - 1],
         full: closed.every((date) => !openDates.has(date)),
       })
-    else
-      items.push(
-        ...closed.map((date) => ({ kind: 'day' as const, date, count: 0 })),
-      )
+    else items.push(...closed.map((date) => ({ kind: 'day' as const, date, count: 0 })))
     closed = []
   }
   for (let date = first; date <= last; date = addDays(date, 1)) {
@@ -783,10 +716,7 @@ function DateStrip({
   search: SearchResult
   onSelect: (date: string) => void
 }) {
-  const items = useMemo(
-    () => stripItems(days, matchingDays),
-    [days, matchingDays],
-  )
+  const items = useMemo(() => stripItems(days, matchingDays), [days, matchingDays])
   const scroller = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -802,20 +732,14 @@ function DateStrip({
 
   let month = ''
   return (
-    <section
-      aria-label="Choose a date. Use the arrow keys to move between dates."
-      className="mt-4"
-    >
+    <section aria-label="Choose a date. Use the arrow keys to move between dates." className="mt-4">
       <div
         ref={scroller}
         className="-mx-5 flex snap-x snap-mandatory scroll-px-5 gap-1.5 overflow-x-auto px-5 pb-2 [scrollbar-width:thin] sm:mx-0 sm:scroll-px-0 sm:px-0"
       >
         {items.map((item) => {
           if (item.kind === 'gap') {
-            const weeks = Math.max(
-              1,
-              Math.round((daysBetween(item.from, item.to) + 1) / 7),
-            )
+            const weeks = Math.max(1, Math.round((daysBetween(item.from, item.to) + 1) / 7))
             return (
               <div
                 key={`gap-${item.from}`}
@@ -840,9 +764,7 @@ function DateStrip({
                 className="flex w-12 shrink-0 flex-col items-center justify-center py-2 text-ink-muted/50"
               >
                 <span className="text-xs">{weekday}</span>
-                <span className="text-sm whitespace-nowrap tabular-nums">
-                  {number}
-                </span>
+                <span className="text-sm whitespace-nowrap tabular-nums">{number}</span>
               </div>
             )
           }
@@ -860,12 +782,10 @@ function DateStrip({
                 const step = { ArrowRight: 1, ArrowLeft: -1 }[event.key]
                 if (!step) return
                 event.preventDefault()
-                const buttons = [
-                  ...(scroller.current?.querySelectorAll('button') ?? []),
-                ]
-                const next = buttons[
-                  buttons.indexOf(event.currentTarget) + step
-                ] as HTMLButtonElement | undefined
+                const buttons = [...(scroller.current?.querySelectorAll('button') ?? [])]
+                const next = buttons[buttons.indexOf(event.currentTarget) + step] as
+                  | HTMLButtonElement
+                  | undefined
                 if (next) {
                   next.focus()
                   next.click()
@@ -885,9 +805,7 @@ function DateStrip({
               <span className="text-base font-semibold whitespace-nowrap tabular-nums">
                 {number}
               </span>
-              <span
-                className={`text-xs ${active ? 'text-white/80' : 'text-ink-muted'}`}
-              >
+              <span className={`text-xs ${active ? 'text-white/80' : 'text-ink-muted'}`}>
                 {item.count} {item.count === 1 ? 'time' : 'times'}
               </span>
             </button>
@@ -911,9 +829,7 @@ function TimeButton({
     <a
       href={slot.href}
       onClick={() =>
-        trackEvent(
-          tone === 'dark' ? 'book_early_schedule_click' : 'book_schedule_click',
-        )
+        trackEvent(tone === 'dark' ? 'book_early_schedule_click' : 'book_schedule_click')
       }
       aria-label={`Book ${slot.label} on ${dateLabel}`}
       className={`flex min-h-12 items-center justify-center rounded-lg px-3 text-[1.02rem] font-semibold whitespace-nowrap tabular-nums no-underline transition-colors ${
@@ -943,10 +859,7 @@ function DayCard({
   const muted = earlier ? 'text-night-muted' : 'text-ink-muted'
   let heading = 'Open times'
   if (earlier) heading = 'Earlier appointment available'
-  else if (isSoonest)
-    heading = hasFilter(filter)
-      ? 'Soonest that fits you'
-      : 'Soonest appointment'
+  else if (isSoonest) heading = hasFilter(filter) ? 'Soonest that fits you' : 'Soonest appointment'
   let waitNote = ''
   if (earlier && search.usualFirstOpening) {
     waitNote = `. Most openings start ${formatDate(search.usualFirstOpening, 'monthDay')}, ${waitPhrase(search.waitDays(search.usualFirstOpening)).replace('in ', '')} away.`
@@ -964,36 +877,24 @@ function DayCard({
           : 'bg-card shadow-[0_1px_2px_rgb(28_37_41/0.06),0_24px_48px_-28px_rgb(28_37_41/0.35)]'
       }`}
     >
-      <h2
-        id="day-card-heading"
-        className={`m-0 text-base font-semibold ${muted}`}
-      >
+      <h2 id="day-card-heading" className={`m-0 text-base font-semibold ${muted}`}>
         {heading}
       </h2>
-      <p className="mt-1 mb-0 font-display text-[1.8rem] leading-tight">
-        {dateLabel}
-      </p>
+      <p className="mt-1 mb-0 font-display text-[1.8rem] leading-tight">{dateLabel}</p>
       <p className={`mt-1 mb-0 text-lg ${muted}`}>
         {waitPhrase(search.waitDays(day.date))}
         {waitNote}
       </p>
-      <ul
-        role="list"
-        className="mt-4 mb-0 grid list-none grid-cols-3 gap-2 p-0 sm:grid-cols-4"
-      >
+      <ul role="list" className="mt-4 mb-0 grid list-none grid-cols-3 gap-2 p-0 sm:grid-cols-4">
         {day.slots.map((slot) => (
           <li key={slot.href}>
-            <TimeButton
-              dateLabel={dateLabel}
-              slot={slot}
-              tone={earlier ? 'dark' : 'light'}
-            />
+            <TimeButton dateLabel={dateLabel} slot={slot} tone={earlier ? 'dark' : 'light'} />
           </li>
         ))}
       </ul>
       <p className={`mt-4 mb-0 text-[0.95rem] ${muted}`}>
-        Mountain Time. Choosing a time opens the U.S. Dermatology Partners
-        booking page, where you confirm the visit.
+        Mountain Time. Choosing a time opens the U.S. Dermatology Partners booking page, where you
+        confirm the visit.
       </p>
       {isSoonest && hasFilter(filter) && overall && overall.date < day.date ? (
         <p className={`mt-2 mb-0 text-[0.95rem] ${muted}`}>
@@ -1001,9 +902,7 @@ function DayCard({
           <a
             href={overall.slot.href}
             onClick={() => trackEvent('book_schedule_click')}
-            className={
-              earlier ? 'font-semibold text-white underline' : 'text-link'
-            }
+            className={earlier ? 'font-semibold text-white underline' : 'text-link'}
           >
             {shortDate(overall.date)} at {overall.slot.label}
           </a>
@@ -1026,38 +925,25 @@ function NoMatch({
 }) {
   return (
     <section className="mt-4 rounded-2xl bg-card p-5 shadow-[0_1px_2px_rgb(28_37_41/0.06)] sm:p-7">
-      <h2 className="m-0 text-lg font-semibold">
-        No open times on {describePageFilter(filter)}.
-      </h2>
+      <h2 className="m-0 text-lg font-semibold">No open times on {describePageFilter(filter)}.</h2>
       {soonest ? (
         <>
           <p className="mt-2 mb-0 text-ink-muted">
             Soonest at any time: {longDate(soonest.date)},{' '}
             {waitPhrase(daysBetween(today, soonest.date))}.
           </p>
-          <ul
-            role="list"
-            className="mt-3 mb-0 grid list-none grid-cols-3 gap-2 p-0 sm:grid-cols-4"
-          >
+          <ul role="list" className="mt-3 mb-0 grid list-none grid-cols-3 gap-2 p-0 sm:grid-cols-4">
             <li>
-              <TimeButton
-                dateLabel={longDate(soonest.date)}
-                slot={soonest.slot}
-                tone="light"
-              />
+              <TimeButton dateLabel={longDate(soonest.date)} slot={soonest.slot} tone="light" />
             </li>
           </ul>
           <p className="mt-3 mb-0 text-[0.95rem] text-ink-muted">
-            Mountain Time. Choosing a time opens the U.S. Dermatology Partners
-            booking page, where you confirm the visit.
+            Mountain Time. Choosing a time opens the U.S. Dermatology Partners booking page, where
+            you confirm the visit.
           </p>
         </>
       ) : null}
-      <button
-        type="button"
-        onClick={onClearFilter}
-        className="btn-secondary mt-4"
-      >
+      <button type="button" onClick={onClearFilter} className="btn-secondary mt-4">
         Show all times
       </button>
     </section>
@@ -1132,15 +1018,10 @@ function CallToSchedule({ visit }: { visit: Visit }) {
       aria-labelledby="call-heading"
       className="mt-4 rounded-2xl bg-card p-6 shadow-[0_1px_2px_rgb(28_37_41/0.06),0_24px_48px_-28px_rgb(28_37_41/0.35)] sm:p-8"
     >
-      <h2
-        id="call-heading"
-        className="m-0 text-base font-semibold text-ink-muted"
-      >
+      <h2 id="call-heading" className="m-0 text-base font-semibold text-ink-muted">
         {visitLabels[visit]} · no online times right now
       </h2>
-      <p className="mt-1 mb-0 font-display text-[1.8rem] leading-tight">
-        Call to schedule
-      </p>
+      <p className="mt-1 mb-0 font-display text-[1.8rem] leading-tight">Call to schedule</p>
       <p className="mt-2 mb-0 text-[1.02rem] text-ink-muted">
         {visit === 'exam'
           ? 'Full-body exams with Dr. Hood are usually booked months ahead. New times show here when someone cancels.'
@@ -1240,9 +1121,7 @@ function ErrorState({ onRetry }: { onRetry: () => void }) {
   return (
     <section className="mt-6 rounded-2xl bg-card p-6" role="alert">
       <h2 className="m-0 text-xl font-semibold">Open times did not load.</h2>
-      <p className="mt-2 mb-0 text-ink-muted">
-        Try again, or use the official calendar.
-      </p>
+      <p className="mt-2 mb-0 text-ink-muted">Try again, or use the official calendar.</p>
       <div className="mt-4 flex flex-wrap gap-3">
         <button type="button" onClick={onRetry} className="btn-primary">
           Try again

@@ -1,4 +1,4 @@
-import { rmSync, readFileSync, existsSync } from 'node:fs'
+import { renameSync, readFileSync, existsSync } from 'node:fs'
 if (existsSync('.local/ready.json')) {
   const { pid } = JSON.parse(readFileSync('.local/ready.json', 'utf8'))
   let running = false
@@ -7,7 +7,14 @@ if (existsSync('.local/ready.json')) {
     running = true
   } catch {}
   if (running) throw new Error('Stop pnpm dev before resetting local data.')
+  renameSync('.local/ready.json', `.local/ready-${Date.now()}.json`)
 }
-rmSync('.local/wrangler-d1', { recursive: true, force: true })
-rmSync('.local/ready.json', { force: true })
-console.log('Local fixture database removed.')
+if (existsSync('.local/dev-logs')) {
+  const backup = `.local/dev-logs-${Date.now()}`
+  renameSync('.local/dev-logs', backup)
+  console.log(
+    `Local dev activity files moved to ${backup}. The next start uses an empty directory.`,
+  )
+} else {
+  console.log('No local dev activity files to reset.')
+}

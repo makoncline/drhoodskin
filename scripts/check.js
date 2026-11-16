@@ -5,20 +5,27 @@ refuseCredentials()
 mkdirSync('test-results', { recursive: true })
 rmSync('test-results/e2e', { recursive: true, force: true })
 let revision = 'uncommitted'
+let dirty = null
 try {
   revision = execFileSync('git', ['rev-parse', 'HEAD'], {
     encoding: 'utf8',
     stdio: ['ignore', 'pipe', 'ignore'],
   }).trim()
+  dirty =
+    execFileSync('git', ['status', '--porcelain', '--untracked-files=normal'], {
+      encoding: 'utf8',
+      stdio: ['ignore', 'pipe', 'ignore'],
+    }).trim().length > 0
 } catch {}
 const report = {
   revision,
+  dirty,
   startedAt: new Date().toISOString(),
   checks: [],
   screenshots: [],
   logs: [],
 }
-for (const name of ['test', 'typecheck']) {
+for (const name of ['lint', 'test', 'typecheck']) {
   const start = Date.now()
   const result = spawnSync('pnpm', [name], { stdio: 'inherit' })
   report.checks.push({
@@ -34,7 +41,7 @@ try {
     if (file.endsWith('.logs.json')) report.logs.push(`test-results/e2e/${file}`)
   }
 } catch {}
-report.passed = report.checks.length === 2 && report.checks.every((c) => c.passed)
+report.passed = report.checks.length === 3 && report.checks.every((c) => c.passed)
 report.visualReview =
   'required: open the desktop and mobile screenshots; a passing test is not visual approval'
 writeFileSync('test-results/report.json', JSON.stringify(report, null, 2))
