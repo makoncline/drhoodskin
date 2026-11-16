@@ -35,6 +35,8 @@ import {
 import { mcpTools } from '../lib/mcpTools'
 import { findAppointments, findAppointmentsTool, InvalidVisitError } from './appointments'
 
+export type RequestTasks = { waitUntil(task: Promise<unknown>): void }
+
 type JsonRpcRequest = {
   id?: number | string | null
   method: string
@@ -120,8 +122,7 @@ function mcpError(id: JsonRpcRequest['id'], code: number, message: string, statu
 
 async function handleMcpRequest(
   request: Request,
-  db: D1Database,
-  ctx: ExecutionContext,
+  ctx: RequestTasks,
   via: 'webmcp' | undefined,
 ) {
   let body: unknown
@@ -205,7 +206,7 @@ async function handleMcpRequest(
     }
 
     ctx.waitUntil(
-      logActivity(db, request, {
+      logActivity(request, {
         k: 'mcp',
         p: agentPaths.mcpEndpoint,
         tool: toolName,
@@ -242,7 +243,7 @@ const loggedPaths = new Set<string>(['/', '/book', ...Object.values(agentPaths)]
 const trackedEvents =
   /^(?:(?:hero|closing|header|sticky|visit)_(?:schedule|scheduler|book_page|callback|call)_click|directions_click|press_click|review_outbound_click|forms_click|insurance_source_click|faq_expand|book_(?:early_)?schedule_click|book_scheduler_click|book_call_click|book_callback_click|book_filter_change|book_visit_switch|book_switch_note_click|book_page_view)$/
 
-export async function handlePublicRequest(request: Request, db: D1Database, ctx: ExecutionContext) {
+export async function handlePublicRequest(request: Request, ctx: RequestTasks) {
   const url = new URL(request.url, siteCanonical)
   const pathname = url.pathname
   const method = request.method
@@ -250,7 +251,7 @@ export async function handlePublicRequest(request: Request, db: D1Database, ctx:
 
   if (method === 'GET' && loggedPaths.has(pathname)) {
     ctx.waitUntil(
-      logActivity(db, request, {
+      logActivity(request, {
         k: 'request',
         p: pathname,
         md: wantsMarkdown(acceptHeader) || undefined,
@@ -275,7 +276,7 @@ export async function handlePublicRequest(request: Request, db: D1Database, ctx:
       trackedEvents.test(eventName) &&
       classifyAgent(request.headers.get('user-agent') ?? '').a === 'human'
     ) {
-      ctx.waitUntil(logActivity(db, request, { k: 'event', p: '/', e: eventName }))
+      ctx.waitUntil(logActivity(request, { k: 'event', p: '/', e: eventName }))
     }
     return new Response(null, { status: 204 })
   }
@@ -417,7 +418,6 @@ export async function handlePublicRequest(request: Request, db: D1Database, ctx:
     if (method === 'POST') {
       return handleMcpRequest(
         request,
-        db,
         ctx,
         url.searchParams.get('via') === 'webmcp' ? 'webmcp' : undefined,
       )

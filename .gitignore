@@ -4,7 +4,11 @@ data/
 .playwright-mcp/
 .impeccable/review/
 node_modules/
+.output/
+**/.data/
+**/*.sqlite*
 .local/
+.docker/
 .wrangler/
 .tanstack/
 dist/

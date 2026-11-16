@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
-import { start, browserHarness, eventually } from './harness.js'
+import { start, browserHarness, eventually, activityRows } from './harness.js'
+import { nextPatientFixture } from '../../scripts/dev/nextpatient.js'
 
 test('patient-pages-desktop-and-mobile', async (t) => {
   const { runtime: r, json, warm } = await start(t)
@@ -13,11 +14,8 @@ test('patient-pages-desktop-and-mobile', async (t) => {
   await page.getByRole('button', { name: 'Refresh', exact: true }).waitFor()
   await screenshot(page, 'book')
   await eventually(
-    () =>
-      r.db
-        .prepare("SELECT count(*) AS n FROM activity WHERE p = '/book' OR e = 'book_page_view'")
-        .first(),
-    (row) => assert.equal(row.n, 1),
+    () => activityRows(r).filter((row) => row.p === '/book' || row.e === 'book_page_view'),
+    (rows) => assert.equal(rows.length, 1),
   )
   assert.equal(
     (await page.locator('a[href*="/appt-book"]').first().getAttribute('href')).startsWith(
@@ -59,9 +57,7 @@ test('patient-pages-desktop-and-mobile', async (t) => {
     .waitFor()
   await screenshot(page, 'home')
   await page.setViewportSize({ width: 1280, height: 900 })
-  const bookViews = await r.db
-    .prepare("SELECT count(*) AS n FROM activity WHERE e = 'book_page_view'")
-    .first()
+  const bookViews = activityRows(r).filter((row) => row.e === 'book_page_view').length
   await page
     .getByRole('navigation', { name: 'Primary' })
     .getByRole('link', { name: 'Book an appointment', exact: true })
@@ -69,18 +65,15 @@ test('patient-pages-desktop-and-mobile', async (t) => {
   await page.waitForURL('**/book')
   await page.getByRole('button', { name: 'Refresh', exact: true }).waitFor()
   await eventually(
-    () => r.db.prepare("SELECT count(*) AS n FROM activity WHERE e = 'book_page_view'").first(),
-    (row) => assert.equal(row.n, bookViews.n + 1),
+    () => activityRows(r).filter((row) => row.e === 'book_page_view').length,
+    (count) => assert.equal(count, bookViews + 1),
   )
   await page.getByRole('button', { name: /When can you come in/ }).click()
   await page.getByRole('button', { name: 'Mon', exact: true }).click()
   await page.waitForURL('**/book?days=mon')
   await page.getByRole('button', { name: 'Reset', exact: true }).click()
   await page.waitForURL('**/book')
-  assert.equal(
-    (await r.db.prepare("SELECT count(*) AS n FROM activity WHERE e = 'book_page_view'").first()).n,
-    bookViews.n + 1,
-  )
+  assert.equal(activityRows(r).filter((row) => row.e === 'book_page_view').length, bookViews + 1)
   assert.equal(r.fixture.requests.length, requests)
 
   const noScript = await open({ javaScriptEnabled: false })
@@ -95,34 +88,22 @@ test('patient-pages-desktop-and-mobile', async (t) => {
   )
   await noScript.goto(r.origin)
   assert.ok((await noScript.getByRole('heading').count()) > 5)
+})
 
-  r.fixture.modes.office = 'failed'
-  const due = await r.db.prepare('SELECT max(due_at) AS due FROM availability').first()
-  await r.scheduled(due.due)
-  await r.scheduled(due.due)
+test('patient-official-scheduler-fallback-without-javascript', async (t) => {
+  const fixture = nextPatientFixture()
+  fixture.modes.office = 'failed'
+  fixture.modes.exam = 'empty'
+  const { runtime: r } = await start(t, { fixture })
+  const { open } = await browserHarness(t, r)
+  const page = await open({ javaScriptEnabled: false })
   await page.goto(r.origin + '/book')
-  await page
-    .getByRole('status')
-    .filter({ hasText: 'Couldn’t refresh. Showing the last checked times.' })
-    .waitFor()
-  await page
-    .getByRole('link', { name: 'Use the U.S. Dermatology Partners scheduler', exact: true })
-    .waitFor()
-  assert.ok((await page.locator('a[href*="/appt-book"]').count()) > 0)
-
-  r.fixture.modes.office = 'dense'
-  const nextDue = await r.db.prepare('SELECT max(due_at) AS due FROM availability').first()
-  await r.scheduled(nextDue.due)
-  await r.scheduled(nextDue.due)
-  const oneDay = await json('/api/appointments?limit=1')
-  const manyDays = await json('/api/appointments?limit=20')
-  assert.ok(oneDay.totalDays > 20)
-  assert.equal(oneDay.totalMatches, manyDays.totalMatches)
-  assert.equal(oneDay.totalDays, manyDays.totalDays)
-  assert.equal(oneDay.days.length, 1)
-  assert.equal(oneDay.days[0].times.length, 12)
-  assert.equal(manyDays.days.length, 20)
-  await noScript.goto(r.origin + '/book')
-  assert.equal(await noScript.locator('a[href*="/appt-book"]').count(), 12)
-  assert.equal(await noScript.getByRole('link', { name: /^Book 8:00 AM on / }).count(), 1)
+  await page.getByRole('heading', { name: 'Open times did not load.', exact: true }).waitFor()
+  const fallback = page.getByRole('link', { name: 'Open the official calendar', exact: true })
+  assert.equal(
+    await fallback.getAttribute('href'),
+    'https://nextpatient.co/p/5596/60744/appointments',
+  )
+  assert.equal(await page.locator('a[href*="/appt-book"]').count(), 0)
+  assert.equal(fixture.requests.filter(({ reason }) => reason === '56487').length, 1)
 })

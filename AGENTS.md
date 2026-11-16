@@ -2,19 +2,26 @@
 
 ## Runtime and validation
 
-- Read PRODUCT.md, DEVELOPMENT.md, OPERATIONS.md, and docs/cloudflare-migration.md before changing the app.
-- Use Node 24 and pnpm 10.29.2. Run commands from the repository root.
-- Use `pnpm dev` for the built Worker in Miniflare. Read `.local/ready.json` for the URL. Reload after a rebuild. Use `pnpm dev:reset` only after stopping it.
-- Run `pnpm check` and open all four home/book desktop/mobile screenshots in `test-results/e2e`. Report commands, results, artifact paths, and the tested SHA.
-- Exercise the real Worker and D1. Replace only NextPatient at the outbound fetch boundary. Block unexpected network traffic. Never fetch an `appt-book` link.
-- Request paths read D1 only. The cron handler refreshes one due visit type per invocation. Keep the Free-plan request, concurrency, D1-query, and CPU budgets.
-- Keep the existing UI and PRODUCT.md content rules. Do not copy the template's payments, auth, or email product code.
-- Edit `db/schema.ts`, generate and review SQL, then commit migrations. Do not edit an applied migration.
-- Use `pnpm activity:report --days=7` for local D1. Use `pnpm activity:export <new-json-path>` and `pnpm activity:report --file=<json-path> --days=7` for exports.
-- The Mac poller remains at `app/scripts/poll-availability.ts` and uses `app/.data`. `pnpm availability:report` reads its history. `pnpm availability:poll` makes real read-only requests; do not run it as a local fixture check.
-- No local task needs production credentials. Deployment needs a separate explicit request and the protected main-only GitHub production job. The coordinator reviews and merges; the implementation agent stops before merging. Do not create account resources or enable paid features without approval.
-- Append template gaps to the Template findings section in docs/cloudflare-migration.md. Do not edit the template repository during this port.
+- Read PRODUCT.md, DEVELOPMENT.md, and OPERATIONS.md before changing the app. Cloudflare migration notes are historical, not the active runtime contract.
+- Keep the root-layout UI, portable parser, Request/Response API logic, activity calculations, and useful fixture-driven tests. Do not add an unused second hosting adapter.
+- Use patched Node 24 (at least 24.22.3) and pnpm 10.29.2 from the repository root.
+- Use `pnpm dev` for the built Node server with synthetic NextPatient responses. Read `.local/ready.json` for the URL and activity directory. Reload after a rebuild.
+- Run `pnpm check` and review all four home/book desktop/mobile screenshots. Report commands, results, artifact paths, and tested SHA.
+- Exercise the real Node server and JSONL persistence. Replace only NextPatient at the outbound fetch boundary; block unexpected requests. Never fetch an `appt-book` link.
+- Keep single-flight availability refresh, the two-minute freshness policy, six-hour stale ceiling, manual-refresh floor, and per-visit failure backoff. API and SSR bundles must use the same process cache.
+- Keep PRODUCT.md content rules and the existing UI. No payments, authentication, or email features are part of this work.
+- Activity logs contain no raw IPs or user agents. Persist the daily visitor salt privately so restarts do not split same-day visitor counts. Retention applies only to approved activity/salt filenames and skips unrelated files, directories, invalid dates, and symlinks.
+- The Mac poller and its data stay at `app/scripts/poll-availability.ts` and `app/.data`. `pnpm availability:poll` performs real requests and is not a fixture check.
+
+## Deployment
+
+- Production stays on makon-dev-0. Never run builds, install dependencies, or use Compose build operations on that VPS.
+- Build and test the private GHCR image in GitHub Actions. PRs do not publish or deploy. Production releases use the protected main-only environment and the existing deploy webhook.
+- Preserve `./data:/app/data`, the `edge` network alias, port 3000, log rotation, and the 256 MiB memory/swap limits.
+- Docker context must exclude credentials, `.docker`, `.env` files, `.local`, logs, SQLite files, and Mac `.data`. Never print tokens or put them in source.
+- Inspect the installed server deployment script before relying on rollback; it can differ from the bootstrap repository. Preserve the old image and Compose before the first image-based rollout.
+- Keep resource and merge approval boundaries. Do not change DNS, Caddy, the tunnel, other apps, or billing as part of an image release.
 
 ## Local history
 
-Dated notes are in [logs.md](logs.md). Search it when prior work is relevant to the task. Verify old observations before using them as current facts. Append new dated notes there.
+Search [logs.md](logs.md) for relevant prior work and verify old observations. Append new dated notes there.

@@ -65,18 +65,41 @@ export function nextPatientFixture() {
       if (mode === 'slots' || mode === 'horizon' || mode === 'dense') {
         const cells = Array.from({ length: 3 }, (_, i) => {
           const date = addDays(day, i)
-          const labels = mode === 'dense'
-            ? date >= monday
-              ? ['8am', '8:30am', '9am', '9:30am', '10am', '10:30am', '11am', '11:30am', '1pm', '1:30pm', '2pm', '2:30pm']
-              : []
-            : mode === 'horizon' ? ['8:40am'] : (times[date] ?? [])
+          const labels =
+            mode === 'dense'
+              ? date >= monday
+                ? [
+                    '8am',
+                    '8:30am',
+                    '9am',
+                    '9:30am',
+                    '10am',
+                    '10:30am',
+                    '11am',
+                    '11:30am',
+                    '1pm',
+                    '1:30pm',
+                    '2pm',
+                    '2:30pm',
+                  ]
+                : []
+              : mode === 'horizon'
+                ? ['8:40am']
+                : (times[date] ?? [])
           const links = labels.map(
             (time, slot) =>
               `<a class="nextpatient-slot-time" href="/p/5596/${reason}${date.replaceAll('-', '')}${slot}/appt-book?reason_id=${reason}&amp;location_id=5596"><span>${time}</span></a>`,
           )
           return `<td class="nextpatient-schedule-day-slots">${links.join('')}</td>`
         })
-        next = Object.keys(times).find((date) => date >= day) ?? ''
+        next =
+          mode === 'dense'
+            ? day < monday
+              ? monday
+              : day
+            : mode === 'horizon'
+              ? day
+              : (Object.keys(times).find((date) => date >= day) ?? '')
         html = `<table><tr>${cells.join('')}<td class="nextpatient-schedule-day-slots nextpatient-schedule-next-available">First available</td></tr></table>`
       } else if (mode === 'phone-only') html = '<p>Please call to schedule</p>'
       else if (mode === 'empty')

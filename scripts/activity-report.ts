@@ -11,7 +11,9 @@ const value = (name: string) =>
 const days = Number(value('days') ?? 7)
 if (!Number.isFinite(days) || days <= 0) throw new Error('Use a positive number of days.')
 const file = value('file')
-const rows = file ? JSON.parse(readFileSync(file, 'utf8')) : await localActivityRows()
+const rows = file
+  ? JSON.parse(readFileSync(file, 'utf8'))
+  : localActivityRows(undefined, { days, strict: false })
 if (!Array.isArray(rows)) throw new Error('Expected a JSON array of exported activity rows.')
 const summary = summarizeActivity(readActivityRows(rows, days))
 console.log(

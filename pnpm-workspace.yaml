@@ -1,6 +1,5 @@
 onlyBuiltDependencies:
   - esbuild
-  - workerd
   - better-sqlite3
 catalog:
   vite: npm:@voidzero-dev/vite-plus-core@1.5.0
