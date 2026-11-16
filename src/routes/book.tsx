@@ -140,17 +140,26 @@ function live(data: VisitData): VisitData {
     : { ...data, availability: { kind: 'none' } }
 }
 
-function formatDate(iso: string, options: Intl.DateTimeFormatOptions) {
-  return new Intl.DateTimeFormat('en-US', {
-    ...options,
-    timeZone: 'UTC',
-  }).format(new Date(`${iso}T00:00:00Z`))
+const dateFormats = {
+  long: { weekday: 'long', month: 'long', day: 'numeric' },
+  short: { weekday: 'short', month: 'short', day: 'numeric' },
+  monthDay: { month: 'long', day: 'numeric' },
+  shortMonthDay: { month: 'short', day: 'numeric' },
+  weekday: { weekday: 'short' },
+} as const
+const dateFormatters = Object.fromEntries(
+  Object.entries(dateFormats).map(([name, options]) => [
+    name,
+    new Intl.DateTimeFormat('en-US', { ...options, timeZone: 'UTC' }),
+  ]),
+) as Record<keyof typeof dateFormats, Intl.DateTimeFormat>
+
+function formatDate(iso: string, format: keyof typeof dateFormats) {
+  return dateFormatters[format].format(new Date(`${iso}T00:00:00Z`))
 }
 
-const longDate = (iso: string) =>
-  formatDate(iso, { weekday: 'long', month: 'long', day: 'numeric' })
-const shortDate = (iso: string) =>
-  formatDate(iso, { weekday: 'short', month: 'short', day: 'numeric' })
+const longDate = (iso: string) => formatDate(iso, 'long')
+const shortDate = (iso: string) => formatDate(iso, 'short')
 
 function waitPhrase(days: number) {
   if (days <= 0) return 'today'
@@ -820,9 +829,9 @@ function DateStrip({
           const newMonth = item.date.slice(0, 7) !== month
           month = item.date.slice(0, 7)
           const number = newMonth
-            ? formatDate(item.date, { month: 'short', day: 'numeric' })
+            ? formatDate(item.date, 'shortMonthDay')
             : String(Number(item.date.slice(8)))
-          const weekday = formatDate(item.date, { weekday: 'short' })
+          const weekday = formatDate(item.date, 'weekday')
           if (item.count === 0) {
             return (
               <div
@@ -890,11 +899,11 @@ function DateStrip({
 }
 
 function TimeButton({
-  date,
+  dateLabel,
   slot,
   tone,
 }: {
-  date: string
+  dateLabel: string
   slot: Slot
   tone: 'light' | 'dark'
 }) {
@@ -906,7 +915,7 @@ function TimeButton({
           tone === 'dark' ? 'book_early_schedule_click' : 'book_schedule_click',
         )
       }
-      aria-label={`Book ${slot.label} on ${longDate(date)}`}
+      aria-label={`Book ${slot.label} on ${dateLabel}`}
       className={`flex min-h-12 items-center justify-center rounded-lg px-3 text-[1.02rem] font-semibold whitespace-nowrap tabular-nums no-underline transition-colors ${
         tone === 'dark'
           ? 'bg-white text-ink hover:bg-action-tint'
@@ -929,6 +938,7 @@ function DayCard({
   filter: PageFilter
   isSoonest: boolean
 }) {
+  const dateLabel = longDate(day.date)
   const earlier = search.isEarlier(day.date)
   const muted = earlier ? 'text-night-muted' : 'text-ink-muted'
   let heading = 'Open times'
@@ -939,7 +949,7 @@ function DayCard({
       : 'Soonest appointment'
   let waitNote = ''
   if (earlier && search.usualFirstOpening) {
-    waitNote = `. Most openings start ${formatDate(search.usualFirstOpening, { month: 'long', day: 'numeric' })}, ${waitPhrase(search.waitDays(search.usualFirstOpening)).replace('in ', '')} away.`
+    waitNote = `. Most openings start ${formatDate(search.usualFirstOpening, 'monthDay')}, ${waitPhrase(search.waitDays(search.usualFirstOpening)).replace('in ', '')} away.`
   } else if (earlier) {
     waitNote = '. Times this soon rarely show online.'
   }
@@ -961,7 +971,7 @@ function DayCard({
         {heading}
       </h2>
       <p className="mt-1 mb-0 font-display text-[1.8rem] leading-tight">
-        {longDate(day.date)}
+        {dateLabel}
       </p>
       <p className={`mt-1 mb-0 text-lg ${muted}`}>
         {waitPhrase(search.waitDays(day.date))}
@@ -974,7 +984,7 @@ function DayCard({
         {day.slots.map((slot) => (
           <li key={slot.href}>
             <TimeButton
-              date={day.date}
+              dateLabel={dateLabel}
               slot={slot}
               tone={earlier ? 'dark' : 'light'}
             />
@@ -1031,7 +1041,7 @@ function NoMatch({
           >
             <li>
               <TimeButton
-                date={soonest.date}
+                dateLabel={longDate(soonest.date)}
                 slot={soonest.slot}
                 tone="light"
               />

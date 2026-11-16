@@ -124,12 +124,25 @@ export async function findAppointments(query: AppointmentQuery) {
         }
       : null
   const days: AppointmentDay[] = []
+  let previousDate: string | undefined
+  let totalDays = 0
   for (const opening of search.matches) {
-    const { time, start, bookingUrl, ...day } = describe(opening)
+    if (opening.date !== previousDate) {
+      totalDays += 1
+      previousDate = opening.date
+    }
+    if (totalDays > limit) continue
     const previous = days.at(-1)
-    const timeOption = { time, start, bookingUrl }
-    if (previous?.date === day.date) previous.times.push(timeOption)
-    else days.push({ ...day, times: [timeOption] })
+    if (previous?.date === opening.date) {
+      previous.times.push({
+        time: opening.slot.label,
+        start: opening.slot.start,
+        bookingUrl: opening.slot.href,
+      })
+    } else {
+      const { time, start, bookingUrl, ...day } = describe(opening)
+      days.push({ ...day, times: [{ time, start, bookingUrl }] })
+    }
   }
 
   return {
@@ -155,9 +168,9 @@ export async function findAppointments(query: AppointmentQuery) {
       : `No ${visitName(visit)} times with Dr. Hood are open online right now. Call ${content.office.phoneDisplay} for the next opening.`,
     usualFirstOpening: search.usualFirstOpening,
     soonest: search.soonest ? describe(search.soonest) : null,
-    days: days.slice(0, limit),
+    days,
     totalMatches: search.matches.length,
-    totalDays: days.length,
+    totalDays,
     hours,
     otherVisit: {
       visit: otherVisitType,
